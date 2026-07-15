@@ -1,0 +1,66 @@
+references:
+  - name: promptfoo
+    repository: https://github.com/promptfoo/promptfoo
+    commit: null
+    license: MIT
+    role: attack candidate generator
+    integration_type: planned-cli-adapter
+    copied_files: []
+
+  - name: Inspect AI
+    repository: https://github.com/UKGovernmentBEIS/inspect_ai
+    commit: null
+    license: MIT
+    role: execution and sandbox backend
+    integration_type: planned-python-dependency
+    copied_files: []
+
+  - name: ClawSentry
+    repository: https://github.com/Elroyper/ClawSentry
+    commit: null
+    license: MIT
+    role: target capability and observation reference
+    integration_type: design-reference
+    copied_files: []
+
+  - name: PyRIT
+    repository: https://github.com/microsoft/PyRIT
+    commit: null
+    license: MIT
+    role: adaptive multi-turn attack policy
+    integration_type: planned-python-adapter
+    copied_files: []
+
+  - name: AgentDojo
+    repository: https://github.com/ethz-spylab/agentdojo
+    commit: null
+    license: MIT
+    role: scenario and utility/security oracle reference
+    integration_type: planned-importer
+    copied_files: []
+
+  - name: InjecAgent
+    repository: https://github.com/uiuc-kang-lab/InjecAgent
+    commit: null
+    license: MIT
+    role: indirect prompt injection seed corpus
+    integration_type: planned-importer
+    copied_files: []
+
+  - name: Agent Security Bench
+    repository: https://github.com/agiresearch/ASB
+    commit: null
+    license: MIT
+    role: attack-surface taxonomy and coverage matrix
+    integration_type: design-and-data-reference
+    copied_files: []
+
+  - name: WASP
+    repository: https://github.com/facebookresearch/wasp
+    commit: null
+    license: CC-BY-NC-4.0-and-mixed
+    role: end-to-end effect oracle and threat-model reference
+    integration_type: design-reference-only
+    copied_files: []
+    restrictions:
+      - Do not copy code or benchmark data into a commercial or company project without approval.
