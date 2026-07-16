@@ -358,3 +358,42 @@ Turns.
 
 Inject a post-Session-open Solver failure and prove persisted cleanup evidence plus zero Docker
 resource delta.
+
+## Cycle 11: Injected Failure Cleanup
+
+### Target Behavior
+
+When a selected Sample raises immediately after opening its Target Session, Inspect records the
+Sample error, the project Store persists `session_opened`, `harness_error`, and `session_closed`, and
+no new token-labeled container or network remains after a bounded wait.
+
+### RED
+
+- **Test added**: `tests/integration/m0a/test_failure_cleanup.py::test_solver_failure_closes_session_and_removes_new_resources`
+- **Behavior asserted**: the explicit failure control exercises project cleanup and Inspect Sandbox
+  cleanup without pruning or inspecting unrelated Docker resources.
+- **Command**: `pytest -m docker tests/integration/m0a/test_failure_cleanup.py -q`
+- **Observed failure**: `AssertionError: assert None is not None` for `samples[0].error` after the
+  untested active-failure branch had been removed.
+- **Failure is correct because**: the Run completed all three Turns successfully, while the test's
+  `finally` still confirmed zero new labeled Docker resources.
+
+### GREEN
+
+- **Minimal implementation**: restored one metadata-gated `RuntimeError` immediately after
+  `session_opened`; the existing exception and `finally` paths recorded error/close evidence and
+  rethrew to Inspect.
+- **Command**: `pytest -m docker tests/integration/m0a/test_failure_cleanup.py -q`
+- **Observed pass**: `1 passed in 27.07s`.
+
+### REFACTOR
+
+- **Refactor done**: no.
+- **Change**: no production refactor was needed. Test helpers snapshot only exact token-labeled
+  container/network IDs and poll their delta for at most 30 seconds.
+- **Command after refactor**: Ruff, format, MyPy, and non-Docker Pytest.
+- **Observed result**: Ruff clean; format clean; MyPy clean; `19 passed, 2 deselected`.
+
+### Next Behavior
+
+Run both Docker paths together, then wire CI and evidence documentation to the verified commands.
