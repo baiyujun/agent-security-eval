@@ -1,6 +1,6 @@
 # M0-A Inspect Execution Validation Design
 
-- Status: implemented and validated locally; Draft PR CI pending
+- Status: implemented and validated locally and on Draft PR #4 CI
 - Date: 2026-07-16
 - Issue: `#3 M0-A: validate Inspect AI execution model`
 - Baseline: `main@f0680326314db766b6d5e1dea9dbf8742e70c5e7`

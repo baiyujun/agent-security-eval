@@ -41,7 +41,7 @@ references:
     runtime_dependency: inspect-ai==0.3.246
     validation_evidence:
       milestone: M0-A
-      status: passed-local-gates
+      status: passed-local-and-draft-pr-ci
       date: "2026-07-16"
       report: docs/development/m0-a-inspect-validation.md
       public_api_only: true

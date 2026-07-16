@@ -5,7 +5,7 @@ fuzzing complexity.
 
 ## M0-A: Inspect AI execution model validation
 
-**Status: validated locally on 2026-07-16; Draft PR CI is the delivery gate.**
+**Status: validated locally and on Draft PR #4 CI on 2026-07-16.**
 
 One project-owned run description now executes as one isolated Inspect Sample and returns correlated
 project-native observations without making Inspect AI the domain model. Automated tests cover two

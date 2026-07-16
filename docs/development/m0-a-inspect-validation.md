@@ -3,8 +3,8 @@
 ## Verdict
 
 **PASS for the bounded M0-A execution-model validation.** On 2026-07-16, the static, non-Docker,
-successful Docker, and injected-failure Docker gates all passed locally. The Draft PR's dedicated
-Docker job remains the delivery gate for a fresh GitHub Actions runner.
+successful Docker, and injected-failure Docker gates passed locally and on Draft PR #4's fresh
+GitHub Actions runner.
 
 This verdict does not mean the security evaluation system, production execution backend, Final
 Assertion Engine, M0-B, M0-C, or M1 is complete.
@@ -164,6 +164,11 @@ Observed local results on 2026-07-16 before delivery:
 - non-Docker Pytest: `24 passed, 2 deselected`;
 - Docker Pytest: `2 passed in 57.06s`; and
 - M0-A labeled container/network sets: empty before and after the combined Docker run.
+
+Draft PR #4 GitHub Actions results:
+
+- `quality`: passed in 46 seconds; and
+- `m0a-docker`: passed in 1 minute 39 seconds.
 
 ## Known Limitations
 
