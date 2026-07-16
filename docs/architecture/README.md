@@ -39,6 +39,14 @@ Security findings, attack progress, control results, normal-task utility, eviden
 harness integrity, and unresolved observations must remain distinct. Third-party runtime objects may
 be used inside an integration, but they are not automatically the project's durable contract.
 
+## Accepted reference reuse boundary
+
+[ADR-0002](../adr/0002-offline-import-native-runtime.md) accepts external benchmarks as source
+languages for offline import into project-native Scenario Packs. The project runtime remains the
+sole production runtime; long-lived upstream runtime adapters are prohibited. The fixed commits,
+source paths, reuse modes, and license gates supporting that decision are recorded in the
+[reference environment source audit](reference-reuse-audit.md).
+
 ## Candidate Designs
 
 The source audit and architecture comparison are documented in

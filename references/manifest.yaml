@@ -218,7 +218,7 @@ references:
     role: offline scenario, fixture, injection, and assertion-candidate source
     integration_type: asset_import
     license: Apache-2.0 for code and software documentation
-    data_license: CC-BY-4.0 for SABER-authored tasks and non-code data
+    data_license: REVIEW_REQUIRED; root LICENSE says CC-BY-4.0 while dataset/README.md says Apache-2.0
     audited_files:
       - task_runtime.py
       - sandbox_shell.py
@@ -469,9 +469,8 @@ references:
       - mcpuniverse/benchmark/task.py
       - mcpuniverse/benchmark/runner.py
       - mcpuniverse/benchmark/cleanups.py
-      - third_party/mcpmark/LICENSE
-      - third_party/mcpmark/tasks/filesystem/easy/file_context/uppercase/meta.json
-      - third_party/mcpmark/tasks/filesystem/easy/file_context/uppercase/verify.py
+      - .gitmodules
+      - third_party/mcpmark
       - LICENSE.txt
     restrictions:
       - Do not call real GitHub, Google, Notion, search, or terminal services in repeatable production evaluations.
