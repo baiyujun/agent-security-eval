@@ -1,0 +1,40 @@
+services:
+  default:
+    build:
+      context: ./default
+    depends_on:
+      target:
+        condition: service_healthy
+    networks: [m0a_internal]
+    labels:
+      agentsec_eval.m0a.token: "${M0A_RESOURCE_TOKEN:-unset}"
+    read_only: true
+    cap_drop: [ALL]
+
+  target:
+    build:
+      context: ./target
+    networks: [m0a_internal]
+    labels:
+      agentsec_eval.m0a.token: "${M0A_RESOURCE_TOKEN:-unset}"
+    read_only: true
+    tmpfs:
+      - /effects
+    cap_drop: [ALL]
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - >-
+          import urllib.request;
+          urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=1).read()
+      interval: 1s
+      timeout: 2s
+      retries: 30
+
+networks:
+  m0a_internal:
+    internal: true
+    labels:
+      agentsec_eval.m0a.token: "${M0A_RESOURCE_TOKEN:-unset}"
