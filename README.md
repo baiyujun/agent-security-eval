@@ -9,19 +9,25 @@ produce reproducible evaluation artifacts from explicit security assertions.
 
 ## Status
 
-This repository is at the research-baseline stage. External framework integrations and security
-evaluation features are not yet implemented. The current evidence and decisions are recorded in:
+This repository is at an early execution-validation stage. M0-A now provides a minimal formal
+Inspect AI `0.3.246` boundary and automated Docker evidence; it is not a complete security
+evaluation system or production execution backend. The current evidence and decisions are recorded
+in:
 
 - [reference reuse analysis](docs/reference-reuse-analysis.md);
 - [candidate architecture options](docs/architecture/reference-informed-options.md); and
+- [M0-A Inspect execution validation](docs/development/m0-a-inspect-validation.md); and
 - [the throwaway Inspect AI execution spike](experiments/inspect-execution-model/README.md).
 
-These documents do not freeze the final package layout, type names, or persistent model.
+The throwaway spike remains research evidence only. M0-A independently implements project-owned
+domain and Target boundaries under `src/agentsec_eval/`; it does not freeze a complete product
+layout or persistent model.
 
 ## Core principles
 
 - The Campaign Controller is the only top-level controller.
-- Inspect AI is planned as the Batch / Sample execution backend.
+- Inspect AI is validated by M0-A as the Batch / Sample execution candidate; the production backend
+  remains incomplete.
 - promptfoo is only a candidate-generation backend.
 - PyRIT is only an Attack Policy within an individual Run.
 - The Final Assertion Engine is the sole formal source of security truth.
@@ -66,7 +72,16 @@ pip install -e ".[dev]"
 ruff check .
 ruff format --check .
 mypy
-pytest
+pytest -m "not docker"
+```
+
+The M0-A integration tests also require a working Docker daemon and Docker Compose. They use a
+deterministic Fake Target, an internal Compose network, and Inspect's no-key mock model:
+
+```bash
+docker version
+docker compose version
+pytest -m docker tests/integration/m0a
 ```
 
 ## Legacy project
