@@ -94,6 +94,7 @@ MCP-Universe 的 GitHub/Notion cleanup 会直接调用真实 API；MCP-SafetyBen
   - `mcp_runtime.py`
   - `tasks/A/info_leak/A_info_001.json`
   - `dataset/data/tasks.jsonl`
+  - `dataset/README.md`
   - `LICENSE`
   - `LICENSES/THIRD-PARTY.md`
 
