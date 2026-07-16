@@ -26,6 +26,13 @@ Treat each external benchmark as a **source language** and the project Scenario 
 project runtime is the sole production runtime.
 
 ```text
+External benchmark = source language
+Project Scenario Pack = internal IR / target format
+Importer = offline compiler frontend
+Project runtime = sole production runtime
+```
+
+```text
 external source at a pinned commit
   -> offline importer
   -> validated project-native Scenario Pack
