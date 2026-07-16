@@ -5,8 +5,10 @@ fuzzing complexity.
 
 ## M0-A: Inspect AI execution model validation
 
-Validate that one project `ExecutionRunSpec` can run as one isolated Sample and return normalized
-observations without making Inspect AI the project domain model.
+Validate that one project-owned run description can execute as one isolated Sample and return
+correlated observations without making Inspect AI the project domain model. The current throwaway
+spike verifies the basic lifecycle with a mock model and local sandbox; Docker isolation, a real
+target, and a durable boundary remain unvalidated.
 
 ## M0-B: Assertion-backed PyRIT scorer validation
 
@@ -19,8 +21,8 @@ Validate PyRIT as an adaptive policy inside one Run without giving it campaign-l
 
 ## M1: Batch Security Eval
 
-Execute reproducible batches against versioned targets and produce assertion-backed `RunOutcome`
-artifacts with separately reported security and utility results.
+Execute reproducible batches against versioned targets and produce assertion-backed artifacts with
+separately reported security and utility results.
 
 ## M2: Coverage-aware Corpus
 

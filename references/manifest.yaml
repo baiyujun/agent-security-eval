@@ -1,66 +1,195 @@
+# Each candidate capability has exactly one verified reuse classification at the fixed commit.
 references:
   - name: promptfoo
     repository: https://github.com/promptfoo/promptfoo
-    commit: null
-    license: MIT
+    default_branch: main
+    commit: fcde2e89a89dc4ca79dcc3012927f50193251759
+    latest_stable_release: "0.121.19"
+    audit_date: "2026-07-16"
+    classification_status: verified-at-fixed-commit
+    reuse_candidates:
+      - capability: standalone candidate-generation CLI
+        classification: ADAPTER_REUSE
+      - capability: target-calling adaptive providers and evaluation runtime
+        classification: REJECT
     role: attack candidate generator
-    integration_type: planned-cli-adapter
+    first_version_decision: revalidate a stable release, then allowlist standalone generation only
+    license: MIT
+    license_evidence: [LICENSE]
+    commercial_use: permitted-with-license-notice
+    license_caveats:
+      - Generated-output provenance and any remote-service terms require separate review.
+      - Local or self-hosted generation must be explicit because remote generation can be the default.
+      - Email validation and the local probe gate must be tested at the selected CLI release.
     copied_files: []
 
   - name: Inspect AI
     repository: https://github.com/UKGovernmentBEIS/inspect_ai
-    commit: null
-    license: MIT
+    default_branch: main
+    commit: ea007a79c556e30fb391c5e98ce2bf80b2362fbf
+    latest_stable_release: "0.3.246"
+    release_commit: 05322696a0f784ec399ef6abbafd3d2a250ea9cc
+    audit_date: "2026-07-16"
+    classification_status: verified-at-fixed-commit
+    reuse_candidates:
+      - capability: released public execution APIs
+        classification: DIRECT_DEPENDENCY
+      - capability: project conversion and log-lifecycle boundary
+        classification: ADAPTER_REUSE
     role: execution and sandbox backend
-    integration_type: planned-python-dependency
+    first_version_decision: validate the remaining execution contract at a pinned release
+    license: MIT
+    license_evidence: [LICENSE]
+    commercial_use: permitted-with-license-notice
+    license_caveats:
+      - Beta API and log-schema churn require version pinning and contract tests.
+      - The source-audit commit differs from the release commit used by the spike.
     copied_files: []
 
   - name: ClawSentry
     repository: https://github.com/Elroyper/ClawSentry
-    commit: null
-    license: MIT
+    default_branch: main
+    commit: b5fe3a764e10e78f7fd5799cb9438896cdb60096
+    latest_stable_release: v0.8.6
+    audit_date: "2026-07-16"
+    classification_status: verified-at-fixed-commit
+    reuse_candidates:
+      - capability: event and trajectory-pattern semantics
+        classification: DESIGN_REFERENCE
+      - capability: Gateway, online models, and concrete adapters
+        classification: REJECT
     role: target capability and observation reference
-    integration_type: design-reference
+    first_version_decision: borrow event semantics but reject Gateway and model imports
+    license: MIT
+    license_evidence: [LICENSE]
+    commercial_use: permitted-with-license-notice
+    license_caveats:
+      - No source or data is adopted by this decision.
+      - Concrete adapters and models are strongly coupled to the online Gateway lifecycle.
     copied_files: []
 
   - name: PyRIT
     repository: https://github.com/microsoft/PyRIT
-    commit: null
+    default_branch: main
+    commit: 339a28ff5e9873713006fc4f94637f595f9f9c59
+    latest_stable_release: v0.14.0
+    audit_date: "2026-07-16"
+    classification_status: verified-at-fixed-commit
+    reuse_candidates:
+      - capability: per-run multi-turn policy
+        classification: ADAPTER_REUSE
+      - capability: selected deterministic converters
+        classification: ADAPTER_REUSE
+      - capability: cross-objective AttackExecutor
+        classification: REJECT
+    role: adaptive multi-turn attack policy within one run
+    first_version_decision: defer pending target/scorer and memory-isolation proof
     license: MIT
-    role: adaptive multi-turn attack policy
-    integration_type: planned-python-adapter
+    license_evidence: [LICENSE]
+    commercial_use: permitted-with-license-notice
+    license_caveats:
+      - The audited development commit and stable release expose different API targets.
+      - Process-global CentralMemory makes concurrent run isolation unresolved.
     copied_files: []
 
   - name: AgentDojo
     repository: https://github.com/ethz-spylab/agentdojo
-    commit: null
-    license: MIT
-    role: scenario and utility/security oracle reference
-    integration_type: planned-importer
+    default_branch: main
+    commit: 089ed468cf3ed0322acc66b0211f26d9d90dbf60
+    latest_stable_release: v0.1.35
+    audit_date: "2026-07-16"
+    classification_status: verified-at-fixed-commit
+    reuse_candidates:
+      - capability: isolated executable suites and oracles
+        classification: ADAPTER_REUSE
+      - capability: provenance-approved fixtures and vectors
+        classification: DATA_REUSE
+      - capability: project-wide runtime ownership
+        classification: REJECT
+    role: executable scenario and utility/security oracle reference
+    first_version_decision: consider a later isolated suite adapter after provenance review
+    license: MIT-with-embedded-third-party-notices
+    license_evidence: [LICENSE, src/agentdojo/yaml_loader.py]
+    commercial_use: conditional-on-asset-review-and-notices
+    license_caveats:
+      - Bundled fixtures and embedded attributed material require per-asset review.
+      - Python suites and YAML includes are trusted executable plugins, not untrusted data.
+      - Upstream security=true means attack success and requires polarity conversion.
     copied_files: []
 
   - name: InjecAgent
     repository: https://github.com/uiuc-kang-lab/InjecAgent
-    commit: null
-    license: MIT
-    role: indirect prompt injection seed corpus
-    integration_type: planned-importer
+    default_branch: main
+    commit: f19c9f2c79a41046eb13c03c51a24c567a8ffa07
+    latest_stable_release: none
+    audit_date: "2026-07-16"
+    classification_status: verified-at-fixed-commit
+    reuse_candidates:
+      - capability: JSON and JSONL seeds plus descriptive tool schema
+        classification: DATA_REUSE
+      - capability: direct-harm and staged data-stealing semantics
+        classification: DESIGN_REFERENCE
+      - capability: runner, parser, GPT cache fill, and success labels
+        classification: REJECT
+    role: indirect prompt-injection seed corpus and staged-progress reference
+    first_version_decision: hold data import until provenance review; reject runner and labels
+    license: MIT-at-repository-root
+    license_evidence: [LICENCE]
+    commercial_use: conditional-on-data-provenance-review
+    license_caveats:
+      - The root license does not establish provenance for every data record or tool description.
+      - Model-generated and third-party content restrictions are unknown.
     copied_files: []
 
   - name: Agent Security Bench
     repository: https://github.com/agiresearch/ASB
-    commit: null
-    license: MIT
-    role: attack-surface taxonomy and coverage matrix
-    integration_type: design-and-data-reference
+    default_branch: main
+    commit: 1f561dccf92d55302368fa67679b4ba9d9c8fdc4
+    latest_stable_release: none
+    audit_date: "2026-07-16"
+    classification_status: verified-at-fixed-commit
+    reuse_candidates:
+      - capability: validated attack, task, and tool seed rows
+        classification: DATA_REUSE
+      - capability: injection-surface taxonomy
+        classification: DESIGN_REFERENCE
+      - capability: controller, AIOS runtime, labels, and damaged asset
+        classification: REJECT
+    role: attack-surface taxonomy and conditional seed source
+    first_version_decision: hold rows for provenance review; reject runtime and labels
+    license: MIT-at-repository-root
+    license_evidence: [LICENSE]
+    commercial_use: conditional-on-data-provenance-review
+    license_caveats:
+      - Dataset authorship, model-generation provenance, and third-party rights are unresolved.
+      - data/agent_task_pot_all.jsonl is an access-restriction HTML page and must not be imported.
     copied_files: []
 
   - name: WASP
     repository: https://github.com/facebookresearch/wasp
-    commit: null
-    license: CC-BY-NC-4.0-and-mixed
-    role: end-to-end effect oracle and threat-model reference
-    integration_type: design-reference-only
+    default_branch: main
+    commit: ffee6f41fde76acd14bd792db442479c506260c2
+    latest_stable_release: none
+    audit_date: "2026-07-16"
+    classification_status: verified-at-fixed-commit
+    reuse_candidates:
+      - capability: separation of progress, end effect, and utility evaluation
+        classification: DESIGN_REFERENCE
+      - capability: root core code, data, and top-level runner
+        classification: REJECT
+      - capability: independently MIT vendored environments in the first version
+        classification: REJECT
+    role: end-to-end effect, progress, and utility evaluation reference
+    first_version_decision: design reference only; copy no core code or data
+    license: CC-BY-NC-4.0-at-root-with-MIT-subdirectories
+    license_evidence:
+      - LICENSE
+      - visualwebarena/LICENSE
+      - claude-35-computer-use-demo/LICENSE
+      - claude-37-computer-use-demo/LICENSE
+    commercial_use: not-approved-for-core-code-or-data
+    license_caveats:
+      - Internal company research is treated as incompatible until legal or rights-holder approval.
+      - Independently MIT subdirectories still require a file and asset provenance audit.
+      - No independent Apache-2.0 subtree was found at the fixed commit.
     copied_files: []
-    restrictions:
-      - Do not copy code or benchmark data into a commercial or company project without approval.
