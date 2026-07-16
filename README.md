@@ -5,13 +5,18 @@ agents.
 
 The system is intended to generate and mutate attack scenarios, execute them in isolated target
 environments, observe real tool calls, guardrail events, and environmental side effects, and
-produce reproducible `RunOutcome` artifacts from explicit security assertions.
+produce reproducible evaluation artifacts from explicit security assertions.
 
 ## Status
 
-This repository is at the initial project-skeleton stage. The architecture documents describe the
-intended boundaries; external framework integrations and security evaluation features are not yet
-implemented.
+This repository is at the research-baseline stage. External framework integrations and security
+evaluation features are not yet implemented. The current evidence and decisions are recorded in:
+
+- [reference reuse analysis](docs/reference-reuse-analysis.md);
+- [candidate architecture options](docs/architecture/reference-informed-options.md); and
+- [the throwaway Inspect AI execution spike](experiments/inspect-execution-model/README.md).
+
+These documents do not freeze the final package layout, type names, or persistent model.
 
 ## Core principles
 
@@ -23,7 +28,8 @@ implemented.
 - Attack generation and security adjudication remain separate.
 - Security and normal-task utility are evaluated separately.
 - Black-box, gray-box, and controlled white-box results are reported separately.
-- External frameworks connect through Adapters and do not become the project domain model.
+- Third-party runtime types remain inside integration/import boundaries unless later evidence
+  justifies a durable project contract.
 
 ## Non-goals
 
@@ -32,13 +38,16 @@ implemented.
 - A single security score does not replace structured outcomes.
 - Attack-generator labels and LLM-grader labels are not final truth.
 
-## Repository structure
+## Current research layout
+
+This is the present repository layout, not a proposed final product architecture.
 
 ```text
 .github/workflows/       Continuous integration
 docs/architecture/       Architecture baseline
 docs/adr/                Architecture decisions
 docs/development/        Delivery roadmap
+experiments/             Throwaway architecture-risk experiments
 references/              Versioned third-party reference registry
 src/agentsec_eval/       Python package
 tests/                   Automated tests
@@ -67,6 +76,7 @@ The historical layered intent-recognition and online guardrail prototype is pres
 
 ## License status
 
-Repository license and ownership terms are pending confirmation.
+No formal open-source license has been selected, and this repository currently grants no license
+for reuse beyond rights provided by applicable law. Ownership terms are pending confirmation.
 Do not copy third-party code or datasets without recording their exact
 source, version, license, and permitted use.
