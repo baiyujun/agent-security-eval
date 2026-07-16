@@ -100,17 +100,32 @@ references:
     audit_date: "2026-07-16"
     classification_status: verified-at-fixed-commit
     reuse_candidates:
-      - capability: isolated executable suites and oracles
-        classification: ADAPTER_REUSE
+      - capability: environment, injection-slot, and oracle semantics
+        classification: DESIGN_REFERENCE
       - capability: provenance-approved fixtures and vectors
         classification: DATA_REUSE
+      - capability: TaskSuite, pipeline, and runtime APIs
+        classification: REJECT
       - capability: project-wide runtime ownership
         classification: REJECT
-    role: executable scenario and utility/security oracle reference
-    first_version_decision: consider a later isolated suite adapter after provenance review
+    role: offline scenario asset and utility/security oracle reference
+    integration_type: asset_import
+    first_version_decision: import a provenance-approved subset into native mock services; do not build a runtime adapter
     license: MIT-with-embedded-third-party-notices
+    data_license: MIT-at-root-with-per-asset-review-required
     license_evidence: [LICENSE, src/agentdojo/yaml_loader.py]
     commercial_use: conditional-on-asset-review-and-notices
+    audited_files:
+      - src/agentdojo/base_tasks.py
+      - src/agentdojo/task_suite/task_suite.py
+      - src/agentdojo/functions_runtime.py
+      - src/agentdojo/yaml_loader.py
+      - src/agentdojo/default_suites/v1/workspace/task_suite.py
+    restrictions:
+      - Do not import AgentDojo task, environment, pipeline, or runtime types into the project-native schema or runtime.
+      - Treat Python suites and YAML includes as executable plugins; convert only explicitly allowlisted assets offline.
+      - Preserve embedded MIT and CC-BY-SA-3.0 notices and review each fixture or include before copying.
+      - Convert upstream security=true to an explicit attack_goal_achieved polarity.
     license_caveats:
       - Bundled fixtures and embedded attributed material require per-asset review.
       - Python suites and YAML includes are trusted executable plugins, not untrusted data.
@@ -192,4 +207,324 @@ references:
       - Internal company research is treated as incompatible until legal or rights-holder approval.
       - Independently MIT subdirectories still require a file and asset provenance audit.
       - No independent Apache-2.0 subtree was found at the fixed commit.
+    copied_files: []
+
+  - name: SABER
+    repository: https://github.com/sssr-lab/SABER
+    default_branch: main
+    commit: bfdffb10c3887b38e1bd57ae2e548faa8f2049e9
+    audit_date: "2026-07-16"
+    classification_status: verified-at-fixed-commit
+    role: offline scenario, fixture, injection, and assertion-candidate source
+    integration_type: asset_import
+    license: Apache-2.0 for code and software documentation
+    data_license: CC-BY-4.0 for SABER-authored tasks and non-code data
+    audited_files:
+      - task_runtime.py
+      - sandbox_shell.py
+      - run_osbench.py
+      - judge_osbench.py
+      - mcp_runtime.py
+      - tasks/A/info_leak/A_info_001.json
+      - dataset/data/tasks.jsonl
+      - dataset/manifest.json
+      - dataset/README.md
+      - LICENSE
+      - LICENSES/THIRD-PARTY.md
+    restrictions:
+      - The root LICENSE assigns CC-BY-4.0 to authored task data, while dataset/README.md claims Apache-2.0; resolve the conflict before redistribution.
+      - Third-party baselines retain their upstream licenses and must not be imported under the repository-level license.
+      - Harmful command regexes are assertion candidates, not final security truth.
+      - Do not use TaskRuntime, SandboxShell, or the SABER runner in the production runtime.
+    copied_files: []
+
+  - name: Inspect Evals CodeIPI
+    repository: https://github.com/UKGovernmentBEIS/inspect_evals
+    default_branch: main
+    commit: 3fda7b008453f8ba6bb7b1471e8fbd1865d2257e
+    audit_date: "2026-07-16"
+    classification_status: verified-at-fixed-commit
+    role: offline coding-agent fixture, injection, canary, and oracle-design source
+    integration_type: asset_import
+    license: MIT
+    data_license: REVIEW_REQUIRED; no independent CodeIPI sample-data license found
+    audited_files:
+      - src/inspect_evals/ipi_coding_agent/ipi_coding_agent.py
+      - src/inspect_evals/ipi_coding_agent/setup.py
+      - src/inspect_evals/ipi_coding_agent/scorer.py
+      - src/inspect_evals/ipi_coding_agent/dataset/samples.json
+      - src/inspect_evals/ipi_coding_agent/docker/compose.yaml
+      - src/inspect_evals/ipi_coding_agent/README.md
+      - LICENSE
+    restrictions:
+      - Confirm that the root MIT license covers each selected sample and its embedded repository content before import.
+      - Keep utility verification separate from security evidence.
+      - Distinguish secret observation, assistant disclosure, attempted exfiltration, executed requests, and receiver receipt.
+      - Imported packs must not depend on Inspect Sample, TaskState, sandbox, or scorer types.
+    copied_files: []
+
+  - name: Terminal-Bench 2
+    repository: https://github.com/harbor-framework/terminal-bench
+    default_branch: main
+    commit: d28711d0da2675d0bb1d56de45ae5df6082438a3
+    audit_date: "2026-07-16"
+    classification_status: verified-at-fixed-commit
+    role: offline terminal-task fixture and verifier source
+    integration_type: asset_import
+    license: Apache-2.0
+    data_license: Apache-2.0 at repository root; REVIEW_REQUIRED per task and third-party asset
+    audited_files:
+      - terminal_bench/handlers/trial_handler.py
+      - terminal_bench/dataset/dataset.py
+      - terminal_bench/harness/harness.py
+      - original-tasks/analyze-access-logs/task.yaml
+      - original-tasks/analyze-access-logs/Dockerfile
+      - original-tasks/analyze-access-logs/docker-compose.yaml
+      - original-tasks/analyze-access-logs/run-tests.sh
+      - original-tasks/analyze-access-logs/solution.sh
+      - original-tasks/analyze-access-logs/tests/test_outputs.py
+      - LICENSE
+    restrictions:
+      - Review each task, base image, dependency, and embedded asset against its original source before import.
+      - Keep solution assets outside the production agent-visible environment.
+      - Treat task tests as utility oracles, not final security truth.
+      - Do not use the Terminal-Bench harness as a production runtime.
+    copied_files: []
+
+  - name: Harbor
+    repository: https://github.com/harbor-framework/harbor
+    default_branch: main
+    commit: d3e606d9f7d1e111bb22d3d820ebed03ec300eb3
+    audit_date: "2026-07-16"
+    classification_status: verified-at-fixed-commit
+    role: offline task-mapping, verifier-isolation, and parity-design reference
+    integration_type: reference_only
+    license: Apache-2.0
+    data_license: REVIEW_REQUIRED per adapter source and task asset
+    audited_files:
+      - src/harbor/models/task/task.py
+      - src/harbor/verifier/verifier.py
+      - src/harbor/trial/trial.py
+      - src/harbor/environments/base.py
+      - adapters/cybergym/adapter.py
+      - examples/tasks/hello-user/task.toml
+      - examples/tasks/hello-user/environment/Dockerfile
+      - examples/tasks/hello-user/tests/test.sh
+      - LICENSE
+    restrictions:
+      - Do not use Harbor Trial, Environment, Agent, or Verifier as a second production execution kernel.
+      - Do not import adapter-produced assets without reviewing the original benchmark and asset licenses.
+      - Use upstream replay only for conversion parity and verifier calibration.
+    copied_files: []
+
+  - name: tau-bench
+    repository: https://github.com/sierra-research/tau-bench
+    default_branch: main
+    commit: 59a200c6d575d595120f1cb70fea53cef0632f6b
+    audit_date: "2026-07-16"
+    classification_status: verified-at-fixed-commit
+    role: offline policy, tool-contract, database, task, and business-end-state source
+    integration_type: asset_import
+    license: MIT
+    data_license: MIT at repository root; no independent domain-data license found
+    audited_files:
+      - tau_bench/types.py
+      - tau_bench/envs/airline/wiki.md
+      - tau_bench/envs/airline/tasks.py
+      - tau_bench/envs/airline/env.py
+      - tau_bench/envs/airline/rules.py
+      - tau_bench/envs/airline/data/flights.json
+      - tau_bench/envs/retail/wiki.md
+      - tau_bench/envs/retail/tasks.py
+      - tau_bench/envs/retail/data/orders.json
+      - LICENSE
+    restrictions:
+      - Confirm authorship and license coverage for selected domain policies, catalogs, and database records before import.
+      - Prefer equivalent business end-state assertions over one exact action sequence.
+      - Do not use upstream task, environment, tool, or runner types in the production runtime.
+    copied_files: []
+
+  - name: tau2-bench historical tau2 v0.2.0
+    repository: https://github.com/sierra-research/tau2-bench
+    default_branch: main
+    commit: f8de30c298689cbe0117d76a378e7315a17e5bd8
+    release: v0.2.0
+    audit_date: "2026-07-16"
+    classification_status: verified-at-fixed-commit
+    role: historical dual-control and evaluator-semantics reference
+    integration_type: upstream_replay
+    license: MIT
+    data_license: MIT at repository root; no independent domain-data license found
+    audited_files:
+      - README.md
+      - src/tau2/data_model/tasks.py
+      - src/tau2/evaluator/evaluator.py
+      - src/tau2/evaluator/evaluator_action.py
+      - src/tau2/evaluator/evaluator_env.py
+      - data/tau2/domains/airline/policy.md
+      - data/tau2/domains/airline/tasks.json
+      - data/tau2/domains/airline/db.json
+      - LICENSE
+    restrictions:
+      - Keep the historical tag commit explicit; the repository main branch now describes tau3-bench.
+      - Use only for historical reproduction and conversion comparison, not as a production runtime.
+      - Review domain-data provenance before copying any policy, task, or database record.
+    copied_files: []
+
+  - name: tau3-bench current tau2-bench repository
+    repository: https://github.com/sierra-research/tau2-bench
+    default_branch: main
+    commit: a1e85084a3960281cb06997594133e8f39ea42a7
+    audit_date: "2026-07-16"
+    classification_status: verified-at-fixed-commit
+    role: current offline policy, tool-contract, database, task, and end-state source
+    integration_type: asset_import
+    license: MIT
+    data_license: MIT at repository root; no independent domain-data license found
+    audited_files:
+      - README.md
+      - src/tau2/data_model/tasks.py
+      - src/tau2/evaluator/evaluator.py
+      - src/tau2/evaluator/evaluator_action.py
+      - src/tau2/evaluator/evaluator_env.py
+      - data/tau2/domains/airline/policy.md
+      - data/tau2/domains/airline/tasks.json
+      - data/tau2/domains/airline/db.json
+      - data/tau2/domains/banking_knowledge/db.json
+      - LICENSE
+    restrictions:
+      - Record both the tau3 benchmark identity and retained tau2 package/data paths in provenance.
+      - Reference actions usually construct a target end state and must not be treated as the sole correct trajectory.
+      - Keep natural-language and LLM-reviewed assertions out of final deterministic security truth.
+      - Do not use the upstream orchestrator, simulator, or Pydantic task types in the production runtime.
+    copied_files: []
+
+  - name: AppWorld
+    repository: https://github.com/StonyBrookNLP/appworld
+    default_branch: main
+    commit: a072b7a86e7c1d5b1d7175659d750ebb9b79f10a
+    audit_date: "2026-07-16"
+    classification_status: verified-at-fixed-commit
+    role: start/end-state diff, requirement assertion, and collateral-change design reference
+    integration_type: reference_only
+    license: Apache-2.0 for public plaintext portions
+    data_license: Apache-2.0 with encrypted-public-redistribution requirement for protected bundles and derivatives
+    audited_files:
+      - src/appworld/task.py
+      - src/appworld/ground_truth.py
+      - src/appworld/evaluator.py
+      - src/appworld/collections/models.py
+      - src/appworld/environment.py
+      - src/appworld/install.py
+      - src/appworld/download.py
+      - src/appworld/.source/apps.bundle
+      - src/appworld/.source/tests.bundle
+      - generate/.source/data.bundle
+      - generate/.source/tasks.bundle
+      - README.md
+      - LICENSE
+    restrictions:
+      - Do not unpack, copy, screenshot, or publish protected bundle content in plaintext.
+      - Public redistribution of protected content or its derivatives must remain encrypted under the upstream condition.
+      - Obtain legal or rights-holder confirmation before treating a derived Scenario Pack as redistributable.
+      - Do not create an AppWorld production runtime adapter.
+    copied_files: []
+
+  - name: MCP-SafetyBench
+    repository: https://github.com/xjzzzzzzzz/MCPSafety
+    default_branch: main
+    commit: 7872437b6369aac1150e3a19e350a981dc554f81
+    audit_date: "2026-07-16"
+    classification_status: verified-at-fixed-commit
+    role: MCP attack taxonomy, malicious-tool, server-mutation, and cleanup design reference
+    integration_type: reference_only
+    license: REVIEW_REQUIRED; no LICENSE file, only a BSD-3-Clause package-metadata claim
+    data_license: REVIEW_REQUIRED
+    audited_files:
+      - pyproject.toml
+      - mcpuniverse/benchmark/task.py
+      - mcpuniverse/benchmark/runner.py
+      - mcpuniverse/mcp/client.py
+      - mcpuniverse/mcp/manager.py
+      - mcpuniverse/evaluator/evaluator.py
+      - mcpuniverse/evaluator/functions.py
+      - mcpuniverse/benchmark/configs/test/location_navigation/google_maps_task_0001.json
+    restrictions:
+      - Copy no code or data until a verifiable license text and data provenance are available.
+      - Replace GitHub, Google, search, terminal, and other real services with local synthetic services.
+      - Do not encode evaluator ordering, dynamic server mutation, or the upstream runner into the project-native schema or runtime.
+    copied_files: []
+
+  - name: MCP-Universe
+    repository: https://github.com/SalesforceAIResearch/MCP-Universe
+    default_branch: main
+    commit: 48b453021694d9823d308627fb7f6b7edd29541a
+    audit_date: "2026-07-16"
+    classification_status: verified-at-fixed-commit
+    role: MCP task, trace-driven cleanup, and offline verifier-design reference
+    integration_type: reference_only
+    license: Apache-2.0
+    data_license: REVIEW_REQUIRED per external service, third-party benchmark, and task asset
+    audited_files:
+      - mcpuniverse/benchmark/task.py
+      - mcpuniverse/benchmark/runner.py
+      - mcpuniverse/benchmark/cleanups.py
+      - third_party/mcpmark/LICENSE
+      - third_party/mcpmark/tasks/filesystem/easy/file_context/uppercase/meta.json
+      - third_party/mcpmark/tasks/filesystem/easy/file_context/uppercase/verify.py
+      - LICENSE.txt
+    restrictions:
+      - Do not call real GitHub, Google, Notion, search, or terminal services in repeatable production evaluations.
+      - Do not use the upstream runner, agent, MCP manager, or cleanup implementation as the production runtime.
+      - Review every external-service and third-party task asset before offline import.
+    copied_files: []
+
+  - name: MCPMark submodule
+    repository: https://github.com/eval-sys/mcpmark
+    default_branch: main
+    commit: a684e7a3069f824bf5230a7cffe0a4de2add7f0d
+    audit_date: "2026-07-16"
+    classification_status: verified-at-fixed-commit
+    role: local MCP filesystem task and verifier-design reference
+    integration_type: reference_only
+    license: Apache-2.0
+    data_license: REVIEW_REQUIRED per task and external service
+    audited_files:
+      - LICENSE
+      - tasks/utils/notion_utils.py
+      - tasks/utils/postgres_utils.py
+      - tasks/filesystem/easy/file_context/uppercase/description.md
+      - tasks/filesystem/easy/file_context/uppercase/meta.json
+      - tasks/filesystem/easy/file_context/uppercase/verify.py
+    restrictions:
+      - Prefer local filesystem cases; external-service tasks require separate credentials, cleanup, and data-license review.
+      - Import only after task-level provenance and asset-license review.
+      - Do not use MCPMark as a second production runtime.
+    copied_files: []
+
+  - name: MCPSecBench
+    repository: https://github.com/AIS2Lab/MCPSecBench
+    default_branch: main
+    commit: 7612c5a3e811dcf01f64e4f2bb324591a2feaaf4
+    audit_date: "2026-07-16"
+    classification_status: verified-at-fixed-commit
+    role: MCP attack taxonomy, malicious-server seed, and attack-implementation reference
+    integration_type: reference_only
+    license: MIT for repository code
+    data_license: REVIEW_REQUIRED; no independent experiment-data license or item-level provenance found
+    audited_files:
+      - README.md
+      - data/README.md
+      - data/experiments.csv
+      - code/data.json
+      - code/main.py
+      - code/maliciousadd.py
+      - code/client.py
+      - code/squatting.py
+      - LICENSE
+    restrictions:
+      - Copy no experiment CSV, prompt JSON, screenshots, or other data before license and provenance review.
+      - Keep GUI, PyAutoGUI, desktop screenshots, clipboard automation, and manual Cursor or Claude Desktop flows out of the automated path.
+      - Treat text labels and manual judgments as background evidence, not final security truth.
+      - Rewrite any selected attack as a local synthetic MCP fixture; never execute hard-coded host paths, container IDs, or shell commands.
     copied_files: []
