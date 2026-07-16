@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import os
 import subprocess
+import threading
 import time
 import uuid
-from collections.abc import Iterator, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass
+from typing import TypeVar
 
 import pytest
 from inspect_ai.log import EvalLog, EvalSample
@@ -17,6 +19,8 @@ from agentsec_eval.domain import (
     ScenarioSpec,
     TargetConfiguration,
 )
+
+T = TypeVar("T")
 
 
 def make_run_spec(run_id: str) -> ExecutionRunSpec:
@@ -71,6 +75,44 @@ def snapshot_resources(resource_token: str) -> DockerResources:
     return DockerResources(
         containers=_docker_ids(["docker", "ps", "-aq", "--filter", f"label={label}"]),
         networks=_docker_ids(["docker", "network", "ls", "-q", "--filter", f"label={label}"]),
+    )
+
+
+def observe_new_resources_during(
+    resource_token: str,
+    baseline: DockerResources,
+    action: Callable[[], T],
+) -> tuple[T, DockerResources]:
+    stop = threading.Event()
+    observed_containers: set[str] = set()
+    observed_networks: set[str] = set()
+    observer_errors: list[Exception] = []
+
+    def observe() -> None:
+        while not stop.is_set():
+            try:
+                current = snapshot_resources(resource_token)
+            except Exception as error:
+                observer_errors.append(error)
+                return
+            observed_containers.update(current.containers - baseline.containers)
+            observed_networks.update(current.networks - baseline.networks)
+            stop.wait(0.05)
+
+    observer = threading.Thread(target=observe, name="m0a-resource-observer", daemon=True)
+    observer.start()
+    try:
+        result = action()
+    finally:
+        stop.set()
+        observer.join(timeout=20)
+    if observer.is_alive():
+        raise TimeoutError("M0-A resource observer did not stop")
+    if observer_errors:
+        raise observer_errors[0]
+    return result, DockerResources(
+        containers=frozenset(observed_containers),
+        networks=frozenset(observed_networks),
     )
 
 

@@ -64,10 +64,12 @@ container identity, and initializes one Sample-scoped `M0ARunState` Store model.
 project `TargetSession`, retains its `session_id`, and sends three deterministic messages through the
 same Session and default Sandbox.
 
-The Store persists `run_id`, `session_id`, `sandbox_id`, the next sequence, and frozen
-`CanonicalTraceEvent` values. Events use unique IDs and strictly increasing sequences. The second
-Turn's simulated `read_file` call and result become separate `tool_call` and `tool_result` events.
-Every Target request and response records the active Sample Sandbox identity.
+The Store persists `run_id`, `session_id`, `sandbox_id`, seven direct Sandbox observations, the next
+sequence, and frozen `CanonicalTraceEvent` values. The Solver calls the public Sandbox
+`connection()` once initially and immediately before and after each Turn. Events use unique IDs and
+strictly increasing sequences. The second Turn's simulated `read_file` call and result become
+separate `tool_call` and `tool_result` events. Every Target request and response records the identity
+observed at that point.
 
 The Session close request is idempotent. The Solver closes it in `finally` and records
 `session_closed` after the close request succeeds.
@@ -103,28 +105,33 @@ returns `CORRECT` only when structured checks confirm:
 - the directly read effect matches the current Run ID, Session ID, and Canary; and
 - a direct Target Sandbox scan contains no peer Canary.
 
-Every check is recorded under `Score.metadata.checks` with a boolean result and detail.
+Every required check is recorded under `Score.metadata.checks` with a boolean result and detail. The
+integration test asserts the exact check-name set. Effect reads, JSON decoding, metadata validation,
+and Target scans become named failed checks and `INCORRECT`; they do not escape as Scorer errors.
 
 ## Failure and Cleanup
 
-For a selected Run ID, M0-A metadata injects a `RuntimeError` immediately after `session_opened`.
-The Solver records `harness_error`, rethrows to Inspect, closes the Target Session in `finally`, and
-persists `session_closed` in the failed Sample's Store.
+For selected Run IDs, M0-A metadata injects a `RuntimeError` immediately after `session_opened`. One
+failed Sample proves the Solver records `harness_error`, rethrows to Inspect, closes the Target
+Session in `finally`, and persists `session_closed`. A second Sample injects a transport error after
+the Target has processed close; the Store records a second `harness_error` with
+`phase=session_close`, while the EvalSample retains the original Solver error.
 
-`run_m0a_validation()` always passes `sandbox_cleanup=True`. The failure test snapshots only
-container and network IDs carrying its unique token before Eval, then polls for at most 30 seconds
-until the post-Eval set difference is empty. It never invokes `docker system prune`, removes no
-baseline resource, and leaves no labeled Target container or process.
+`run_m0a_validation()` always passes `sandbox_cleanup=True`. During Eval, a monitor must observe at
+least four token-labeled service containers and two labeled networks for the two failed Samples.
+After Eval, the test polls for at most 30 seconds until those exact new IDs disappear. It never
+invokes `docker system prune`, removes no baseline resource, and leaves no labeled Target container
+or process.
 
 ## Five-Item Acceptance Matrix
 
 | Required proof | Result | Automated evidence |
 |---|---|---|
 | One project Run Spec maps to one Inspect Sample | PASS | Unit mapping and metadata-recovery tests |
-| A custom Solver completes at least three external Target Turns | PASS | Two-Sample Docker success test |
-| Three Turns reuse one logical Session and one Sample Sandbox | PASS | Store identities and per-event Sandbox assertions |
+| A custom Solver completes at least three external Target Turns | PASS | Overlapping two-Sample Docker success test |
+| Three Turns reuse one logical Session and one Sample Sandbox | PASS | One Session plus seven direct Sandbox observations per Sample |
 | Target traffic, tool events, environment evidence, and Scorer correlate to one Run ID | PASS | Canonical trace and structured Score checks |
-| Solver failure cleans Target Session and Inspect Docker resources | PASS | Injected-failure Store and zero-delta Docker assertions |
+| Solver failure cleans Target Session and Inspect Docker resources | PASS | Normal-close and close-error Stores plus observed-resource disappearance |
 
 ## Reproduction
 
@@ -154,8 +161,8 @@ Observed local results on 2026-07-16 before delivery:
 - Ruff check: passed;
 - Ruff format check: passed;
 - MyPy: passed;
-- non-Docker Pytest: `19 passed, 2 deselected`;
-- Docker Pytest: `2 passed in 57.45s`; and
+- non-Docker Pytest: `24 passed, 2 deselected`;
+- Docker Pytest: `2 passed in 57.06s`; and
 - M0-A labeled container/network sets: empty before and after the combined Docker run.
 
 ## Known Limitations
@@ -163,8 +170,8 @@ Observed local results on 2026-07-16 before delivery:
 - M0-A is a validation Harness, not a production execution backend or security oracle.
 - It uses a deterministic Fake Target and Inspect mock model, not a real Agent or provider.
 - It validates Inspect AI `0.3.246`; beta API and EvalLog schema changes require contract retesting.
-- It validates normal completion and one injected failure point, not cancellation, retry, resume, or
-  host termination.
+- It validates normal completion, post-Session-open failure, and a post-close transport error, not
+  cancellation, retry, resume, or host termination.
 - Cleanup assertions cover token-labeled containers and networks. The fixture declares no volumes;
   Docker image layers and build cache are outside the Sample runtime-resource assertion.
 - The Compose fixture is resolved from a source checkout and is not packaged as a distributable

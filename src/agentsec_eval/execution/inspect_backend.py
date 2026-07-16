@@ -16,6 +16,7 @@ def execution_run_spec_to_sample(
     *,
     peer_canaries: Sequence[str] = (),
     fail_after_session_open: bool = False,
+    fail_session_close: bool = False,
 ) -> Sample:
     return Sample(
         id=run_spec.run_id,
@@ -25,6 +26,7 @@ def execution_run_spec_to_sample(
             "execution_run_spec": run_spec.model_dump(mode="json"),
             "m0a_peer_canaries": list(peer_canaries),
             "m0a_fail_after_session_open": fail_after_session_open,
+            "m0a_fail_session_close": fail_session_close,
         },
     )
 

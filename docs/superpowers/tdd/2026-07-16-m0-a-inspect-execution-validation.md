@@ -397,3 +397,170 @@ no new token-labeled container or network remains after a bounded wait.
 ### Next Behavior
 
 Run both Docker paths together, then wire CI and evidence documentation to the verified commands.
+
+## Cycle 12: Unique Batch Identities
+
+### Target Behavior
+
+M0-A rejects duplicate Run IDs or Canaries before constructing Inspect Samples.
+
+### RED
+
+- **Test added**: duplicate identity tests in `tests/unit/execution/test_m0a_harness.py`.
+- **Behavior asserted**: peer-Canary isolation and Sample identity cannot be ambiguous or vacuous.
+- **Command**: `pytest tests/unit/execution/test_m0a_harness.py -q`
+- **Observed failure**: both cases failed with `DID NOT RAISE ValueError`.
+- **Failure is correct because**: `build_m0a_task()` accepted both duplicate sets.
+
+### GREEN
+
+- **Minimal implementation**: compare Run-ID and Canary list cardinality with their sets before
+  Sample construction.
+- **Command**: `pytest tests/unit/execution/test_m0a_harness.py -q`
+- **Observed pass**: `2 passed`.
+
+### REFACTOR
+
+- **Refactor done**: no.
+- **Change**: no refactor needed.
+- **Command after refactor**: not needed.
+- **Observed result**: the GREEN result remained the cycle evidence.
+
+### Next Behavior
+
+Prevent Session cleanup errors from replacing a primary Solver error.
+
+## Cycle 13: Cleanup Error Adjudication
+
+### Target Behavior
+
+Session close returns its failure to the Solver for logging and adjudication instead of raising from
+inside `finally` and masking an active exception.
+
+### RED
+
+- **Test added**: `test_attempt_session_close_returns_failure_for_solver_adjudication`.
+- **Behavior asserted**: the cleanup boundary returns the close error without throwing it.
+- **Command**: focused Pytest for the new test.
+- **Observed failure**: `ImportError: cannot import name '_attempt_session_close'`.
+- **Failure is correct because**: close was still awaited unguarded in the Solver's `finally` block.
+
+### GREEN
+
+- **Minimal implementation**: added `_attempt_session_close`, tracked the primary error, recorded
+  cleanup failures separately, and propagated a cleanup error only when no primary error exists.
+- **Command**: `pytest tests/unit/execution/test_m0a_harness.py -q`
+- **Observed pass**: `3 passed`.
+
+### REFACTOR
+
+- **Refactor done**: no.
+- **Change**: cleanup event-write errors follow the same primary-error preservation rule.
+- **Command after refactor**: not needed.
+- **Observed result**: the GREEN result remained the cycle evidence.
+
+### Next Behavior
+
+Re-observe the real Docker container identity throughout every Turn.
+
+## Cycle 14: Per-Turn Sandbox Observation
+
+### Target Behavior
+
+Each Sample stores one initial and six per-Turn public Sandbox connection observations, and every
+observation identifies the same Docker container.
+
+### RED
+
+- **Test added**: Store assertions in the two-Sample Docker success test.
+- **Behavior asserted**: same-Sandbox proof uses repeated public observations rather than copied
+  literals.
+- **Command**: `pytest -m docker tests/integration/m0a/test_success.py -q`
+- **Observed failure**: `KeyError: 'M0ARunState:sandbox_observations'`.
+- **Failure is correct because**: the Solver captured the container identity only once.
+
+### GREEN
+
+- **Minimal implementation**: call `sandbox("default").connection()` initially and before/after
+  every Turn, persist all seven IDs, and use the current observation in canonical events.
+- **Command**: `pytest -m docker tests/integration/m0a/test_success.py -q`
+- **Observed pass**: `1 passed in 28.93s`.
+
+### REFACTOR
+
+- **Refactor done**: yes.
+- **Change**: centralized public connection validation in `_sandbox_container_id`.
+- **Command after refactor**: the same Docker test.
+- **Observed result**: remained green.
+
+### Next Behavior
+
+Witness labeled Docker resources while Eval is active, then prove their disappearance.
+
+## Cycle 15: Resource Lifecycle Witness
+
+### Target Behavior
+
+The cleanup test must observe token-labeled containers and networks during Eval before accepting an
+empty post-Eval resource delta.
+
+### RED
+
+- **Test added**: runtime resource-observer use in `test_failure_cleanup.py`.
+- **Behavior asserted**: missing labels cannot make empty baseline/post snapshots pass vacuously.
+- **Command**: `pytest -m docker tests/integration/m0a/test_failure_cleanup.py -q`
+- **Observed failure**: `ImportError: cannot import name 'observe_new_resources_during'`.
+- **Failure is correct because**: only before/after snapshots existed.
+
+### GREEN
+
+- **Minimal implementation**: a test-only monitor thread polls exact token labels during the main
+  thread's real Eval, accumulates observed IDs, and propagates observer failures.
+- **Command**: `pytest -m docker tests/integration/m0a/test_failure_cleanup.py -q`
+- **Observed pass**: `1 passed in 27.96s`.
+
+### REFACTOR
+
+- **Refactor done**: yes.
+- **Change**: the final failure test runs two concurrent failed Samples so one proves normal
+  `session_closed` and the other proves a post-close transport error cannot replace the primary
+  Solver error.
+- **Command after refactor**: the same Docker failure test.
+- **Observed result**: `1 passed in 28.27s`, after observing at least four containers and two networks.
+
+### Next Behavior
+
+Keep Scorer evidence failures inside the exact structured check schema.
+
+## Cycle 16: Structured Scorer Evidence Failures
+
+### Target Behavior
+
+Invalid effect JSON or peer-Canary metadata yields named failed checks rather than Scorer exceptions.
+
+### RED
+
+- **Test added**: effect and peer evidence helper tests in `test_m0a_harness.py`.
+- **Behavior asserted**: evidence parsing always produces boolean/detail check records.
+- **Command**: `pytest tests/unit/execution/test_m0a_harness.py -q`
+- **Observed failure**: missing `_effect_evidence_check` import during collection.
+- **Failure is correct because**: effect decode and peer metadata errors still escaped the Scorer.
+
+### GREEN
+
+- **Minimal implementation**: added pure evidence-check helpers and guarded asynchronous Target reads
+  and scans; the Scorer now returns `INCORRECT` with all required checks.
+- **Command**: `pytest tests/unit/execution/test_m0a_harness.py -q`
+- **Observed pass**: `5 passed`.
+
+### REFACTOR
+
+- **Refactor done**: yes.
+- **Change**: the success integration test now asserts overlapping Sample intervals and exact equality
+  with the nine required Scorer check names.
+- **Command after refactor**: focused success Docker test and all non-Docker tests.
+- **Observed result**: success Docker `1 passed in 29.05s`; non-Docker `24 passed, 2 deselected`.
+
+### Next Behavior
+
+Run the complete final gates, commit the review fixes, push, and verify the Draft PR CI jobs.

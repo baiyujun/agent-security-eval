@@ -135,8 +135,8 @@ The Solver reconstructs the model only from `TaskState.metadata` and verifies th
 ## Sample-Scoped State and Trace Flow
 
 The execution package defines an M0-A-only `StoreModel` with `run_id`, `session_id`, `sandbox_id`,
-`next_sequence`, and `events`. This type is runtime-local and never enters `domain` or `targets`.
-Each Sample receives its own Inspect Store automatically.
+direct `sandbox_observations`, `next_sequence`, and `events`. This type is runtime-local and never
+enters `domain` or `targets`. Each Sample receives its own Inspect Store automatically.
 
 The Solver performs this sequence:
 
@@ -145,7 +145,8 @@ The Solver performs this sequence:
 3. Create one TargetAdapter and open one TargetSession.
 4. Record `session_opened`.
 5. If failure injection is enabled for this Sample, raise after Session creation.
-6. Send three deterministic turns through the same Session.
+6. Send three deterministic turns through the same Session, re-observing the public Sandbox
+   container identity immediately before and after every Turn.
 7. Record one `target_request` and one `target_response` per turn.
 8. Convert the second-turn simulated tool call and result into separate canonical events.
 9. On the third turn, read the reported effect path directly from `sandbox("target")` and validate
@@ -189,7 +190,8 @@ contains a named boolean result and detail for every check:
 - every recorded turn uses the captured Sample Sandbox identity.
 
 The Scorer reads the effect file through `sandbox("target").read_file()`. A Target response that only
-claims an effect occurred cannot satisfy the check.
+claims an effect occurred cannot satisfy the check. Evidence read, decode, or scan failures produce
+named failed checks and an `INCORRECT` Score rather than escaping the Scorer.
 
 ## Failure and Cleanup
 
@@ -197,11 +199,11 @@ Fault injection is M0-A execution metadata, not a domain field. It raises immedi
 `session_opened`, exercises `harness_error`, rethrows to Inspect, and still invokes Session close in
 `finally`.
 
-`run_m0a_validation()` always requests `sandbox_cleanup=True`. The integration test records the
-sets of container and network IDs carrying its unique resource-token label before evaluation. After
-the failing Eval returns, it polls for a bounded interval until the set difference is empty. It does
-not prune Docker, inspect unrelated resources, or remove resources present in the baseline. No
-remaining labeled target container also proves that the Fake Target process is gone.
+`run_m0a_validation()` always requests `sandbox_cleanup=True`. A monitor records the exact container
+and network IDs carrying the unique resource-token label while evaluation is active, proving labels
+were applied, then the test polls for a bounded interval until every newly observed ID disappears.
+It does not prune Docker, inspect unrelated resources, or remove resources present in the baseline.
+No remaining labeled target container also proves that the Fake Target process is gone.
 
 ## Automated Verification
 
@@ -209,13 +211,15 @@ Unit tests cover frozen/round-trip models, trace invariants, one-to-one Sample m
 recovery, Sample ID equality, and the absence of `inspect_ai` imports in the Target package.
 
 The successful Docker integration test runs two Run Specs in one Task with `max_samples=2` and the
-official `mockllm/model`. It verifies two successful Eval samples, different Session and Sandbox
-identities, three turns per Sample, separate Stores/canaries/effect files, passing structured scores,
-and discoverable EvalLog results.
+official `mockllm/model`. It verifies overlapping Sample start/completion intervals, two successful
+Eval samples, different Session and Sandbox identities, seven direct Sandbox observations per
+Sample, three turns, separate Stores/canaries/effect files, the exact structured check schema, and
+discoverable EvalLog results.
 
-The failure integration test uses one fault-injected Sample, a bounded test timeout, and a unique
-resource token. It verifies an Inspect error result, `harness_error` and `session_closed` events in
-the failed Sample's persisted Store, and zero newly leaked labeled containers or networks.
+The failure integration test uses two concurrent fault-injected Samples, a bounded timeout, and a
+unique resource token. One proves ordinary failure records `harness_error` plus `session_closed`;
+the other injects a post-close transport error and proves it is recorded without replacing the
+original Solver exception. Both prove zero leaked observed containers or networks.
 
 Pytest markers `docker` and `integration` are registered. Local environments may skip Docker tests
 only with a concrete Docker-unavailable reason. The CI Docker job first runs `docker version` and
