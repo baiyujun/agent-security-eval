@@ -199,3 +199,71 @@ Calling `TargetSession.close()` more than once sends exactly one close request.
 ### Next Behavior
 
 Pure one-to-one mapping between `ExecutionRunSpec` and Inspect `Sample` metadata.
+
+## Cycle 7: Run Spec to Sample Mapping
+
+### Target Behavior
+
+One project `ExecutionRunSpec` maps to one Inspect `Sample` with the same ID, deterministic input,
+complete versioned metadata, and recoverable M0-A execution controls.
+
+### RED
+
+- **Test added**: `tests/unit/execution/test_inspect_backend.py::test_run_spec_maps_to_one_sample_with_recoverable_metadata`
+- **Behavior asserted**: the pure mapping preserves project identity and reconstructs the original
+  Run Spec without execution-side state.
+- **Command**: `pytest tests/unit/execution/test_inspect_backend.py::test_run_spec_maps_to_one_sample_with_recoverable_metadata -q`
+- **Observed failure**: `ModuleNotFoundError: No module named 'agentsec_eval.execution'`.
+- **Failure is correct because**: no formal Inspect execution boundary existed before the test.
+
+### GREEN
+
+- **Minimal implementation**: added the public `Sample` mapping and Run Spec recovery functions with
+  schema version, full JSON-mode Run Spec, peer canaries, and fault metadata.
+- **Command**: `pytest tests/unit/execution/test_inspect_backend.py::test_run_spec_maps_to_one_sample_with_recoverable_metadata -q`
+- **Observed pass**: `1 passed`.
+
+### REFACTOR
+
+- **Refactor done**: no.
+- **Change**: the mapping remains a direct pure construction with no runtime lifecycle behavior.
+- **Command after refactor**: not needed.
+- **Observed result**: the GREEN result remained the cycle evidence.
+
+### Next Behavior
+
+Reject metadata whose schema is missing or unsupported.
+
+## Cycle 8: Metadata Schema Enforcement
+
+### Target Behavior
+
+Run Spec recovery accepts only the M0-A metadata schema version written by the mapper.
+
+### RED
+
+- **Test added**: `tests/unit/execution/test_inspect_backend.py::test_metadata_recovery_rejects_unknown_schema`
+- **Behavior asserted**: missing and future schema versions cannot be silently interpreted as the
+  current contract.
+- **Command**: `pytest tests/unit/execution/test_inspect_backend.py::test_metadata_recovery_rejects_unknown_schema -q`
+- **Observed failure**: both cases failed with `DID NOT RAISE ValueError`.
+- **Failure is correct because**: recovery restored the nested Run Spec but did not inspect its
+  enclosing schema version.
+
+### GREEN
+
+- **Minimal implementation**: compare the metadata version with schema `1` before Pydantic model
+  recovery and raise for any other value.
+- **Command**: `pytest tests/unit/execution/test_inspect_backend.py -q`
+- **Observed pass**: `3 passed`.
+
+### REFACTOR
+
+- **Refactor done**: no.
+- **Change**: no refactor was needed for the single boundary check.
+- **Command after refactor**: focused Pytest, Ruff check/format, and MyPy commands.
+- **Observed result**: `3 passed`; Ruff clean; format clean; MyPy clean over three files.
+
+### Next Behavior
+
+Validate the deterministic two-service Compose fixture and its Target HTTP protocol.
