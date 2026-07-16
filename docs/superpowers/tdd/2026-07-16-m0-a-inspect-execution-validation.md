@@ -267,3 +267,94 @@ Run Spec recovery accepts only the M0-A metadata schema version written by the m
 ### Next Behavior
 
 Validate the deterministic two-service Compose fixture and its Target HTTP protocol.
+
+## Infrastructure Validation: Deterministic Compose Fixture
+
+This fixture is test infrastructure rather than packaged production behavior, so it followed the
+approved plan's configuration and real protocol validation instead of claiming a RED/GREEN cycle.
+
+- **Compose configuration**: machine assertions confirmed exactly `default` and `target`, no
+  published ports, one `internal: true` network, and matching resource-token labels.
+- **Real protocol smoke**: built and started an isolated Compose project; opened one Session; sent
+  three Turns through `default`; observed the Turn 2 tool call/result; directly read the Turn 3
+  effect file from `target`; closed twice; queried state with `turn == 3` and `closed == true`.
+- **Cleanup**: removed only the isolated Compose project and confirmed zero containers and networks
+  remained for its resource token.
+
+## Cycle 9: Reported Effect Path
+
+### Target Behavior
+
+The normalized third-turn result retains the Target-reported effect path for subsequent direct
+Sandbox confirmation.
+
+### RED
+
+- **Test added**: `tests/unit/targets/test_http_session.py::test_target_session_preserves_reported_effect_path`
+- **Behavior asserted**: Target normalization does not discard the path needed by the Harness.
+- **Command**: `pytest tests/unit/targets/test_http_session.py::test_target_session_preserves_reported_effect_path -q`
+- **Observed failure**: `AttributeError: 'TargetTurnResult' object has no attribute 'effect_path'`.
+- **Failure is correct because**: Pydantic ignored the extra wire field because no project contract
+  field existed.
+
+### GREEN
+
+- **Minimal implementation**: added optional `effect_path` to the frozen Target Turn result.
+- **Command**: `pytest tests/unit/targets/test_http_session.py::test_target_session_preserves_reported_effect_path -q`
+- **Observed pass**: `1 passed`.
+
+### REFACTOR
+
+- **Refactor done**: no.
+- **Change**: no conversion branch was needed; existing Pydantic normalization handles the field.
+- **Command after refactor**: not needed.
+- **Observed result**: the GREEN result remained the cycle evidence.
+
+### Next Behavior
+
+Execute and score two concurrent Docker-backed Inspect Samples without cross-Sample state.
+
+## Cycle 10: Concurrent Inspect Success Path
+
+### Target Behavior
+
+Two Run Specs execute concurrently as two Inspect Samples; each retains an isolated Store, logical
+Session, Docker Sandbox, Canary, effect file, trace, and structured passing Score across three
+Turns.
+
+### RED
+
+- **Test added**: `tests/integration/m0a/test_success.py::test_two_samples_keep_sessions_stores_canaries_and_effects_isolated`
+- **Behavior asserted**: the complete project-to-Inspect-to-Target-to-Scorer path satisfies the M0-A
+  success criteria and leaves a discoverable EvalLog.
+- **Command**: `pytest -m docker tests/integration/m0a/test_success.py -q`
+- **Observed failure**: `ImportError: cannot import name 'run_m0a_validation'`.
+- **Failure is correct because**: Sample mapping existed, but no formal Inspect Task, Solver, Store,
+  Sandbox transport, Scorer, or Eval lifecycle had been implemented.
+
+### GREEN
+
+- **Minimal implementation**: added the Inspect Sandbox JSON transport, `M0ARunState`, three-turn
+  Solver, tool-event conversion, direct effect confirmation, structured Harness Scorer, in-memory
+  Task builder, concurrent mock-model Eval wrapper, and Docker-aware test fixtures.
+- **Command**: `pytest -m docker tests/integration/m0a/test_success.py -q`
+- **Observed pass**: `1 passed in 28.52s`.
+
+### REFACTOR
+
+- **Refactor done**: yes.
+- **Change**: changed helper annotations from broad strings to the domain Literal vocabularies and
+  formatted the implementation. During GREEN debugging, real EvalLog evidence showed that Inspect
+  `0.3.246` implements Docker `read_file()` through Compose copy, which cannot read this Docker
+  engine's `tmpfs` mount even though the file exists inside the container. The Target effect path
+  was moved to its ephemeral writable container layer, with no host mount or volume, so the public
+  API can perform direct evidence collection.
+- **Command after refactor**: Ruff, format, MyPy, non-Docker Pytest, the Docker success test, and
+  before/after labeled Docker resource queries.
+- **Observed result**: Ruff clean; format clean; MyPy clean; `19 passed, 1 deselected`; Docker
+  `1 passed in 28.52s`; labeled container and network sets were empty both before and after.
+
+### Next Behavior
+
+Inject a post-Session-open Solver failure and prove persisted cleanup evidence plus zero Docker
+resource delta.

@@ -17,9 +17,6 @@ services:
     networks: [m0a_internal]
     labels:
       agentsec_eval.m0a.token: "${M0A_RESOURCE_TOKEN:-unset}"
-    read_only: true
-    tmpfs:
-      - /effects
     cap_drop: [ALL]
     healthcheck:
       test:

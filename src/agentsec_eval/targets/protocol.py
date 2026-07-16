@@ -25,6 +25,7 @@ class TargetTurnResult(BaseModel):
     turn: PositiveInt
     response: str
     tool_calls: tuple[TargetToolCall, ...] = ()
+    effect_path: str | None = None
 
 
 class TargetSession(Protocol):

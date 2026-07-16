@@ -125,3 +125,22 @@ def test_target_session_close_is_idempotent() -> None:
         30,
     )
     assert len(transport.calls) == 2
+
+
+def test_target_session_preserves_reported_effect_path() -> None:
+    transport = RecordingTransport(
+        [
+            {"session_id": "session-001"},
+            {
+                "session_id": "session-001",
+                "turn": 3,
+                "response": "environment effect written",
+                "effect_path": "/effects/session-001.json",
+            },
+        ]
+    )
+
+    session = asyncio.run(JsonHttpTargetAdapter(transport).open_session(make_run_spec()))
+    result = asyncio.run(session.send("three"))
+
+    assert result.effect_path == "/effects/session-001.json"
