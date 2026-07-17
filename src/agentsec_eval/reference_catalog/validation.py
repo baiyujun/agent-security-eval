@@ -23,9 +23,9 @@ def validate_records(
 ) -> tuple[UpstreamLedgerRecord, ...]:
     """Validate ledger-wide invariants without mutating or reordering records."""
 
-    validated = tuple(records)
+    validated_records: list[UpstreamLedgerRecord] = []
     identities: set[tuple[str, str, str]] = set()
-    for record in validated:
+    for record in records:
         try:
             _RELATIVE_PATH_ADAPTER.validate_python(record.source_path)
         except ValidationError as error:
@@ -33,20 +33,27 @@ def validate_records(
                 f"source_path must be a relative POSIX path: {record.source_path!r}"
             ) from error
 
-        _reject_unsafe_key(record.source_record_key, field_name="text-bearing key")
-        if record.native_output_id is not None:
-            _reject_unsafe_key(record.native_output_id, field_name="native_output_id")
+        validated = UpstreamLedgerRecord.model_validate(record.model_dump(mode="python"))
+
+        _reject_unsafe_key(validated.source_record_key, field_name="text-bearing key")
+        if validated.native_output_id is not None:
+            _reject_unsafe_key(validated.native_output_id, field_name="native_output_id")
         if require_initial_outputs and (
-            record.native_output_kind is not None or record.native_output_id is not None
+            validated.native_output_kind is not None or validated.native_output_id is not None
         ):
             raise ValueError("initial ledger records must not contain a native output")
 
-        identity = (record.source_project, record.source_path, record.source_record_key)
+        identity = (
+            validated.source_project,
+            validated.source_path,
+            validated.source_record_key,
+        )
         if identity in identities:
             raise ValueError(
                 "duplicate ledger identity: "
-                f"{record.source_project}/{record.source_path}/{record.source_record_key}"
+                f"{validated.source_project}/{validated.source_path}/{validated.source_record_key}"
             )
         identities.add(identity)
+        validated_records.append(validated)
 
-    return validated
+    return tuple(validated_records)

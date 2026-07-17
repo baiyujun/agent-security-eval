@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import MutableMapping
 from enum import StrEnum
-from typing import TypeVar
+from typing import TypeVar, cast
 
 import pytest
 from pydantic import ValidationError
@@ -137,6 +138,30 @@ def test_required_text_fields_reject_blank_or_non_string_values(
 
 
 @pytest.mark.parametrize(
+    "field",
+    [
+        "source_project",
+        "source_repository",
+        "source_record_key",
+        "asset_family",
+        "scenario_class",
+        "category",
+        "attack_origin",
+        "attack_delivery_mode",
+    ],
+)
+def test_identity_text_rejects_leading_or_trailing_whitespace(
+    record_values: dict[str, object], field: str
+) -> None:
+    original = record_values[field]
+    assert isinstance(original, str)
+
+    for invalid_value in (f" {original}", f"{original} "):
+        with pytest.raises(ValidationError, match="whitespace"):
+            UpstreamLedgerRecord.model_validate({**record_values, field: invalid_value})
+
+
+@pytest.mark.parametrize(
     ("field", "invalid_value"),
     [
         ("source_commit", "a" * 39),
@@ -214,6 +239,7 @@ def test_role_and_source_kind_table_accepts_only_approved_pairs(
     }
     if record_role in {"attack_generation_entry", "delivery_strategy_entry"}:
         values["source_project"] = "promptfoo"
+        values.update(promptfoo_common_values())
     if record_role == "delivery_strategy_entry":
         values.update(strategy_runtime_values())
 
@@ -260,6 +286,7 @@ def test_selectors_cannot_be_adapter_candidates(
         record_role=role,
         source_asset_kind=source_asset_kind,
         native_conversion_disposition=native_conversion_disposition,
+        **promptfoo_common_values(),
     )
     if role == "delivery_strategy_entry":
         record_values.update(strategy_runtime_values())
@@ -280,6 +307,13 @@ def strategy_runtime_values(
     }
 
 
+def promptfoo_common_values() -> dict[str, object]:
+    return {
+        "generation_dependency": "local_only",
+        "embedded_data_license_disposition": "not_applicable",
+    }
+
+
 @pytest.mark.parametrize("missing_field", strategy_runtime_values())
 def test_promptfoo_strategy_requires_complete_runtime_metadata(
     record_values: dict[str, object], missing_field: str
@@ -289,11 +323,76 @@ def test_promptfoo_strategy_requires_complete_runtime_metadata(
         record_role="delivery_strategy_entry",
         source_asset_kind="strategy",
         native_conversion_disposition="generator_adapter_candidate",
+        **promptfoo_common_values(),
         **strategy_runtime_values(),
     )
     record_values[missing_field] = None
 
     with pytest.raises(ValidationError, match="Strategy runtime metadata"):
+        UpstreamLedgerRecord.model_validate(record_values)
+
+
+@pytest.mark.parametrize(
+    ("source_asset_kind", "record_role"),
+    [
+        ("plugin", "attack_generation_entry"),
+        ("plugin_collection", "attack_generation_entry"),
+        ("plugin_alias", "attack_generation_entry"),
+        ("strategy", "delivery_strategy_entry"),
+    ],
+)
+@pytest.mark.parametrize(
+    "missing_field",
+    ["generation_dependency", "embedded_data_license_disposition"],
+)
+def test_every_promptfoo_entry_requires_common_metadata(
+    record_values: dict[str, object],
+    source_asset_kind: str,
+    record_role: str,
+    missing_field: str,
+) -> None:
+    record_values.update(
+        source_project="promptfoo",
+        record_role=record_role,
+        source_asset_kind=source_asset_kind,
+        native_conversion_disposition=(
+            "generator_adapter_candidate"
+            if source_asset_kind in {"plugin", "strategy"}
+            else "design_reference_only"
+        ),
+        **promptfoo_common_values(),
+    )
+    if source_asset_kind == "strategy":
+        record_values.update(strategy_runtime_values())
+    record_values[missing_field] = None
+
+    with pytest.raises(ValidationError, match="Promptfoo Entry metadata"):
+        UpstreamLedgerRecord.model_validate(record_values)
+
+
+@pytest.mark.parametrize(
+    "field",
+    [
+        "alias_of",
+        "plugin_collection_ids",
+        "expands_to_plugin_ids",
+        "expands_to_strategy_ids",
+    ],
+)
+def test_promptfoo_identity_metadata_rejects_surrounding_whitespace(
+    record_values: dict[str, object], field: str
+) -> None:
+    value: object = " selector-id " if field == "alias_of" else [" selector-id "]
+    record_values.update(
+        source_project="promptfoo",
+        record_role="attack_generation_entry",
+        source_asset_kind="plugin_alias",
+        native_conversion_disposition="design_reference_only",
+        **promptfoo_common_values(),
+    )
+    record_values[field] = value
+
+    with pytest.raises(ValidationError, match="whitespace"):
         UpstreamLedgerRecord.model_validate(record_values)
 
 
@@ -338,6 +437,47 @@ def test_native_output_id_without_kind_is_rejected(record_values: dict[str, obje
     record_values["native_output_id"] = "scenario/A_info_001"
 
     with pytest.raises(ValidationError, match="native_output"):
+        UpstreamLedgerRecord.model_validate(record_values)
+
+
+def test_confirmed_no_output_has_none_kind_and_null_id(
+    record_values: dict[str, object],
+) -> None:
+    record_values.update(
+        record_role="attack_taxonomy",
+        source_asset_kind="mcpsecbench_taxonomy",
+        native_conversion_disposition="design_reference_only",
+        native_output_kind="none",
+    )
+
+    record = UpstreamLedgerRecord.model_validate(record_values)
+
+    assert record.native_output_kind is NativeOutputKind.NONE
+    assert record.native_output_id is None
+
+
+def test_confirmed_no_output_rejects_an_output_id(record_values: dict[str, object]) -> None:
+    record_values.update(
+        record_role="attack_taxonomy",
+        source_asset_kind="mcpsecbench_taxonomy",
+        native_conversion_disposition="design_reference_only",
+        native_output_kind="none",
+        native_output_id="invented/output-id",
+    )
+
+    with pytest.raises(ValidationError, match="none.*native_output_id"):
+        UpstreamLedgerRecord.model_validate(record_values)
+
+
+def test_native_output_id_rejects_surrounding_whitespace(
+    record_values: dict[str, object],
+) -> None:
+    record_values.update(
+        native_output_kind="scenario_asset",
+        native_output_id=" scenario/A_info_001 ",
+    )
+
+    with pytest.raises(ValidationError, match="whitespace"):
         UpstreamLedgerRecord.model_validate(record_values)
 
 
@@ -404,10 +544,11 @@ def test_non_initial_native_outputs_follow_the_role_kind_table(
         source_asset_kind=source_asset_kind,
         native_conversion_disposition=native_conversion_disposition,
         native_output_kind=native_output_kind,
-        native_output_id="native/output-001",
+        native_output_id=(None if native_output_kind == "none" else "native/output-001"),
     )
     if record_role in {"attack_generation_entry", "delivery_strategy_entry"}:
         record_values["source_project"] = "promptfoo"
+        record_values.update(promptfoo_common_values())
     if record_role == "delivery_strategy_entry":
         reuse_classification = {
             "generator_adapter_candidate": "GENERATOR_ADAPTER_REUSE",
@@ -419,6 +560,7 @@ def test_non_initial_native_outputs_follow_the_role_kind_table(
     record = UpstreamLedgerRecord.model_validate(record_values)
 
     assert record.native_output_kind is NativeOutputKind(native_output_kind)
+    assert (record.native_output_id is None) is (native_output_kind == "none")
 
 
 @pytest.mark.parametrize(
@@ -445,6 +587,7 @@ def test_non_initial_native_outputs_reject_prohibited_mappings(
     )
     if record_role == "attack_generation_entry":
         record_values["source_project"] = "promptfoo"
+        record_values.update(promptfoo_common_values())
 
     with pytest.raises(ValidationError, match="native output"):
         UpstreamLedgerRecord.model_validate(record_values)
@@ -496,6 +639,82 @@ def test_source_coverage_requires_every_enum_count_key() -> None:
 
     with pytest.raises(ValidationError, match="every RecordRole"):
         SourceCoverage.model_validate(values)
+
+
+@pytest.mark.parametrize(
+    "field",
+    ["record_role_counts", "raw_reuse_counts", "native_conversion_counts"],
+)
+def test_source_coverage_count_mappings_are_deeply_immutable(field: str) -> None:
+    coverage = valid_source_coverage()
+    counts = cast(MutableMapping[object, int], getattr(coverage, field))
+    key = next(iter(counts))
+
+    with pytest.raises(TypeError):
+        counts[key] = 999
+
+    dumped = coverage.model_dump()
+    assert isinstance(dumped[field], dict)
+    coverage.model_dump_json()
+
+
+def test_mutating_constructor_input_does_not_mutate_model() -> None:
+    role_counts = all_counts(RecordRole, benchmark_scenario=1)
+    raw_reuse_counts = all_counts(RawReuseDisposition, review_required=1)
+    native_conversion_counts = all_counts(
+        NativeConversionDisposition,
+        eligible_for_semantic_reconstruction=1,
+    )
+    coverage = SourceCoverage(
+        source_project="saber",
+        discovered_total=1,
+        indexed_total=1,
+        record_role_counts=role_counts,
+        raw_reuse_counts=raw_reuse_counts,
+        native_conversion_counts=native_conversion_counts,
+    )
+
+    role_counts[RecordRole.BENCHMARK_SCENARIO] = 999
+    raw_reuse_counts[RawReuseDisposition.REVIEW_REQUIRED] = 999
+    native_conversion_counts[NativeConversionDisposition.ELIGIBLE_FOR_SEMANTIC_RECONSTRUCTION] = 999
+
+    assert coverage.record_role_counts[RecordRole.BENCHMARK_SCENARIO] == 1
+    assert coverage.raw_reuse_counts[RawReuseDisposition.REVIEW_REQUIRED] == 1
+    assert (
+        coverage.native_conversion_counts[
+            NativeConversionDisposition.ELIGIBLE_FOR_SEMANTIC_RECONSTRUCTION
+        ]
+        == 1
+    )
+
+    summary_role_counts = all_counts(RecordRole, benchmark_scenario=1)
+    summary_raw_reuse_counts = all_counts(RawReuseDisposition, review_required=1)
+    summary_native_conversion_counts = all_counts(
+        NativeConversionDisposition,
+        eligible_for_semantic_reconstruction=1,
+    )
+    summary_values = valid_coverage_summary().model_dump()
+    summary_values.update(
+        role_counts=summary_role_counts,
+        raw_reuse_counts=summary_raw_reuse_counts,
+        native_conversion_counts=summary_native_conversion_counts,
+    )
+    summary = CoverageSummary.model_validate(summary_values)
+
+    summary_role_counts[RecordRole.BENCHMARK_SCENARIO] = 999
+    summary_raw_reuse_counts[RawReuseDisposition.REVIEW_REQUIRED] = 999
+    summary_native_conversion_counts[
+        NativeConversionDisposition.ELIGIBLE_FOR_SEMANTIC_RECONSTRUCTION
+    ] = 999
+
+    assert summary.role_counts[RecordRole.BENCHMARK_SCENARIO] == 1
+    assert summary.raw_reuse_counts[RawReuseDisposition.REVIEW_REQUIRED] == 1
+    assert (
+        summary.native_conversion_counts[
+            NativeConversionDisposition.ELIGIBLE_FOR_SEMANTIC_RECONSTRUCTION
+        ]
+        == 1
+    )
 
 
 def valid_coverage_summary() -> CoverageSummary:
@@ -571,3 +790,164 @@ def test_promptfoo_and_saber_summaries_enforce_internal_totals() -> None:
             scenario_b_count=0,
             scenario_c_count=0,
         )
+
+
+@pytest.mark.parametrize(
+    "field",
+    ["role_counts", "raw_reuse_counts", "native_conversion_counts"],
+)
+def test_coverage_summary_count_mappings_are_deeply_immutable(field: str) -> None:
+    summary = valid_coverage_summary()
+    counts = cast(MutableMapping[object, int], getattr(summary, field))
+    key = next(iter(counts))
+
+    with pytest.raises(TypeError):
+        counts[key] = 999
+
+    dumped = summary.model_dump()
+    assert isinstance(dumped[field], dict)
+    summary.model_dump_json()
+
+
+def promptfoo_source_coverage() -> SourceCoverage:
+    return SourceCoverage(
+        source_project="promptfoo",
+        discovered_total=2,
+        indexed_total=2,
+        record_role_counts=all_counts(
+            RecordRole,
+            attack_generation_entry=1,
+            delivery_strategy_entry=1,
+        ),
+        raw_reuse_counts=all_counts(RawReuseDisposition, allowed=2),
+        native_conversion_counts=all_counts(
+            NativeConversionDisposition,
+            generator_adapter_candidate=2,
+        ),
+    )
+
+
+def test_coverage_summary_reconciles_promptfoo_summary_with_source_and_roles() -> None:
+    saber = valid_source_coverage()
+    promptfoo = promptfoo_source_coverage()
+
+    with pytest.raises(ValidationError, match="Promptfoo"):
+        CoverageSummary(
+            source_order=("saber", "promptfoo"),
+            sources=(saber, promptfoo),
+            role_counts=all_counts(
+                RecordRole,
+                benchmark_scenario=1,
+                attack_generation_entry=1,
+                delivery_strategy_entry=1,
+            ),
+            raw_reuse_counts=all_counts(
+                RawReuseDisposition,
+                review_required=1,
+                allowed=2,
+            ),
+            native_conversion_counts=all_counts(
+                NativeConversionDisposition,
+                eligible_for_semantic_reconstruction=1,
+                generator_adapter_candidate=2,
+            ),
+            promptfoo_summary=PromptfooSummary(
+                concrete_plugin_ids=1,
+                plugin_collection_ids=0,
+                alias_only_plugin_selectors=0,
+                unique_plugin_entries=1,
+                accepted_strategy_ids=0,
+                registry_only_strategy_stubs=0,
+                strategy_entries=0,
+            ),
+            saber_summary=valid_coverage_summary().saber_summary,
+            ledger_total=3,
+        )
+
+
+def test_coverage_summary_reconciles_saber_summary_with_source() -> None:
+    values = valid_coverage_summary().model_dump()
+    values["saber_summary"] = SaberSummary(
+        expected_upstream_total=0,
+        discovered_total=0,
+        indexed_total=0,
+        scenario_a_count=0,
+        scenario_b_count=0,
+        scenario_c_count=0,
+    )
+
+    with pytest.raises(ValidationError, match="SABER"):
+        CoverageSummary.model_validate(values)
+
+
+def test_missing_sources_require_zero_summaries() -> None:
+    zero_summary = CoverageSummary(
+        source_order=(),
+        sources=(),
+        role_counts=all_counts(RecordRole),
+        raw_reuse_counts=all_counts(RawReuseDisposition),
+        native_conversion_counts=all_counts(NativeConversionDisposition),
+        promptfoo_summary=PromptfooSummary(
+            concrete_plugin_ids=0,
+            plugin_collection_ids=0,
+            alias_only_plugin_selectors=0,
+            unique_plugin_entries=0,
+            accepted_strategy_ids=0,
+            registry_only_strategy_stubs=0,
+            strategy_entries=0,
+        ),
+        saber_summary=SaberSummary(
+            expected_upstream_total=0,
+            discovered_total=0,
+            indexed_total=0,
+            scenario_a_count=0,
+            scenario_b_count=0,
+            scenario_c_count=0,
+        ),
+        ledger_total=0,
+    )
+    assert zero_summary.ledger_total == 0
+
+    values = zero_summary.model_dump()
+    values["promptfoo_summary"] = PromptfooSummary(
+        concrete_plugin_ids=1,
+        plugin_collection_ids=0,
+        alias_only_plugin_selectors=0,
+        unique_plugin_entries=1,
+        accepted_strategy_ids=0,
+        registry_only_strategy_stubs=0,
+        strategy_entries=0,
+    )
+    with pytest.raises(ValidationError, match="Promptfoo"):
+        CoverageSummary.model_validate(values)
+
+    values = zero_summary.model_dump()
+    values["saber_summary"] = SaberSummary(
+        expected_upstream_total=1,
+        discovered_total=1,
+        indexed_total=1,
+        scenario_a_count=1,
+        scenario_b_count=0,
+        scenario_c_count=0,
+    )
+    with pytest.raises(ValidationError, match="SABER"):
+        CoverageSummary.model_validate(values)
+
+
+def test_coverage_summary_rejects_duplicate_source_projects() -> None:
+    source = valid_source_coverage()
+    values = valid_coverage_summary().model_dump()
+    values.update(
+        source_order=("saber", "saber"),
+        sources=(source, source),
+        role_counts=all_counts(RecordRole, benchmark_scenario=2),
+        raw_reuse_counts=all_counts(RawReuseDisposition, review_required=2),
+        native_conversion_counts=all_counts(
+            NativeConversionDisposition,
+            eligible_for_semantic_reconstruction=2,
+        ),
+        ledger_total=2,
+    )
+
+    with pytest.raises(ValidationError, match="duplicate source_project"):
+        CoverageSummary.model_validate(values)
