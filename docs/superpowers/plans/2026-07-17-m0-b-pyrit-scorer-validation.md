@@ -118,7 +118,10 @@ class ProgressDecision(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
     run_id: NonEmptyText
     state: ProgressState
-    rationale: str = ""
+    stage_reached: AttackStage
+    progress_features: dict[str, JsonValue] = Field(default_factory=dict)
+    internal_rationale: str = ""
+    policy_feedback: str = ""
     evidence_ids: tuple[NonEmptyText, ...] = ()
     metadata: dict[str, JsonValue] = Field(default_factory=dict)
 
@@ -300,3 +303,50 @@ git commit -m "docs: record M0-B scorer validation"
 git push -u origin feat/m0-b-pyrit-scorer-validation
 gh pr create --draft --base main --head feat/m0-b-pyrit-scorer-validation
 ```
+
+### Task 6: Close review-blocking public scorer paths
+
+**Files:**
+- Modify: `src/agentsec_eval/assertions/__init__.py`
+- Modify: `src/agentsec_eval/assertions/progress.py`
+- Modify: `src/agentsec_eval/integrations/pyrit/scorer.py`
+- Modify: `tests/unit/assertions/test_progress.py`
+- Modify: `tests/unit/integrations/pyrit/test_scorer.py`
+- Modify: `tests/integration/m0b/test_pyrit_scorer.py`
+- Modify: M0-B development, design, goal, plan, and TDD evidence documents
+
+**Interfaces:**
+- Consumes: one Run-bound PyRIT `Message` and one project `ProgressOracle`.
+- Produces: one complete project-backed `Score` for normal, blocked, and other-error single-piece
+  responses.
+
+- [x] **Step 1: RED-test the complete decision contract**
+
+Assert that `AttackStage`, `stage_reached`, `progress_features`, `internal_rationale`, and
+`policy_feedback` round-trip through `ProgressDecision` JSON.
+
+- [x] **Step 2: Implement the final unmerged v1 decision shape**
+
+Add the typed stage and separate trusted/adversarial text fields without importing PyRIT.
+
+- [x] **Step 3: RED-test real public blocked/error calls**
+
+Call `score_async()` with error-typed `MessagePiece` instances for `blocked`, `unknown`, empty
+blocked content, and blocked partial content. Assert the Oracle call and complete decision metadata.
+
+- [x] **Step 4: Override message-level scoring minimally**
+
+Implement `_score_async()` to score the single validated piece through the project Oracle. Prefer
+blocked `prompt_metadata["partial_content"]` when it is a string. Preserve PyRIT's explicit
+`skip_on_error_result=True` opt-out.
+
+- [x] **Step 5: RED-test and implement feedback separation**
+
+Assert `Score.score_rationale == decision.policy_feedback` and that an internal Canary-bearing
+rationale is absent from that attacker-visible string while remaining recoverable from the full
+decision JSON.
+
+- [ ] **Step 6: Run all delivery gates and update Draft PR #7**
+
+Run the exact core, M0-B, MyPy, Ruff, Docker, and diff commands from Task 5, then require `quality`,
+`m0a-docker`, and `m0b-pyrit` to pass on the new PR Head.

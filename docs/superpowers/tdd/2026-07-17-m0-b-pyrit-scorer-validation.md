@@ -91,6 +91,95 @@ states exactly, and preserves the complete normalized decision in versioned scor
 - **Change**: kept the full typed project decision as JSON and limited flat fields to stable scalar
   controls, avoiding a second lossy project-state shape.
 
+## Cycle 4: Complete Progress Decision Contract
+
+### Target Behavior
+
+The unmerged metadata v1 contract carries a required attack stage, typed JSON progress features,
+trusted internal rationale, and separately sanitized policy feedback.
+
+### RED
+
+- **Test added**: complete decision round-trip assertions in
+  `tests/unit/assertions/test_progress.py`.
+- **Command**: `pytest tests/unit/assertions/test_progress.py -q`.
+- **Observed failure**: collection failed with `ImportError: cannot import name 'AttackStage'`.
+- **Failure is correct because**: the project decision contract had no stage vocabulary or split
+  feedback fields.
+
+### GREEN
+
+- **Minimal implementation**: added the six-value `AttackStage`, required `stage_reached`,
+  `progress_features`, `internal_rationale`, and `policy_feedback`; exported the stage type from the
+  PyRIT-independent assertions package.
+- **Command**: `pytest tests/unit/assertions -q`.
+- **Observed pass**: `8 passed`.
+
+### REFACTOR
+
+- **Refactor done**: no.
+- **Change**: no compatibility alias for the draft-only `rationale` field was retained.
+
+## Cycle 5: Trusted Rationale and Policy Feedback
+
+### Target Behavior
+
+Canary-bearing internal audit detail remains recoverable in the complete decision JSON, while only
+Oracle-sanitized policy feedback becomes PyRIT `Score.score_rationale`.
+
+### RED
+
+- **Test added**:
+  `test_scorer_exposes_only_sanitized_policy_feedback_as_rationale`.
+- **Command**: `pytest tests/unit/integrations/pyrit/test_scorer.py -q`.
+- **Observed failure**: `6 failed, 2 passed`; the adapter accessed removed
+  `decision.rationale`, and cross-Run normalization lacked the required stage.
+- **Failure is correct because**: one draft field still served both audit and attacker feedback.
+
+### GREEN
+
+- **Minimal implementation**: mapped only `policy_feedback` to `score_rationale`, kept
+  `internal_rationale` in the complete decision JSON, added flat `stage_reached`, and made cross-Run
+  normalization emit stage `NONE` plus sanitized generic feedback.
+- **Command**: `pytest tests/unit/integrations/pyrit/test_scorer.py -q`.
+- **Observed pass**: `8 passed`.
+
+### REFACTOR
+
+- **Refactor done**: no.
+- **Change**: the existing single Score builder remained the one translation point.
+
+## Cycle 6: Public Blocked and Error Scoring
+
+### Target Behavior
+
+Inherited public `score_async()` calls the project Oracle and preserves complete decisions for
+error-typed blocked empty content, blocked partial content, and other Target errors.
+
+### RED
+
+- **Tests added**: three public-path cases in `tests/integration/m0b/test_pyrit_scorer.py`.
+- **Command**: `pytest tests/integration/m0b/test_pyrit_scorer.py -q`.
+- **Observed failure**: `3 failed, 3 passed`; every new Oracle call list was empty because PyRIT
+  emitted its metadata-free fallback score.
+- **Failure is correct because**: the adapter only overrode piece-level scoring, which error-typed
+  pieces never reached.
+
+### GREEN
+
+- **Minimal implementation**: overrode the message-level `_score_async()` extension point to route
+  the one validated piece through the Oracle and selected string blocked partial content when
+  present.
+- **Command**: `pytest tests/integration/m0b/test_pyrit_scorer.py -q`.
+- **Observed pass**: `6 passed`.
+
+### REFACTOR
+
+- **Refactor done**: yes.
+- **Change**: extracted one `_candidate_response()` helper shared by message- and piece-level paths.
+- **Command after refactor**: assertion/scorer focused tests plus explicit MyPy.
+- **Observed result**: `16 passed`; MyPy found no issues in 7 files.
+
 ## Compatibility Evidence: Receiver and Concurrent Run Binding
 
 The deterministic Mock Receiver integration tests passed on their first run after the unit-driven
@@ -104,14 +193,14 @@ adapter implementation. They are compatibility evidence, not a separate claimed 
 - **Boundary case**: only `agentsec_eval.integrations.pyrit` imports PyRIT in production source.
 - **Focused command**: `pytest tests/unit/integrations/pyrit tests/integration/m0b
   tests/unit/integrations/test_pyrit_import_boundary.py`.
-- **Observed pass before final delivery validation**: `11 passed`.
-- **Focused type command**: explicit MyPy invocation over the two adapter files and two PyRIT test
-  files.
-- **Observed type result before final delivery validation**: `Success: no issues found in 4 source
+- **Observed pass before final delivery validation**: `15 passed`.
+- **Focused type command**: explicit MyPy invocation over assertion contracts, the adapter, and their
+  unit/integration tests.
+- **Observed type result before final delivery validation**: `Success: no issues found in 7 source
   files`.
 
-The final delivery run also recorded `38 passed, 2 deselected` for the core non-Docker suite and
-`2 passed in 58.73s` for the unchanged M0-A Docker suite.
+The corrected local delivery run also recorded `39 passed, 2 deselected` for the core non-Docker
+suite and `2 passed in 59.33s` for the unchanged M0-A Docker suite.
 
 ## Refactor Decision
 

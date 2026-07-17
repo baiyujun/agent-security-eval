@@ -26,6 +26,17 @@ class ProgressState(StrEnum):
     INVALID_RUN = "INVALID_RUN"
 
 
+class AttackStage(StrEnum):
+    """Furthest security-relevant stage confirmed for one Run."""
+
+    NONE = "NONE"
+    DELIVERED = "DELIVERED"
+    INFLUENCED = "INFLUENCED"
+    ATTEMPTED = "ATTEMPTED"
+    EXECUTED = "EXECUTED"
+    EFFECT = "EFFECT"
+
+
 class ProgressDecision(BaseModel):
     """One project-owned progress decision for an explicitly identified Run."""
 
@@ -33,7 +44,10 @@ class ProgressDecision(BaseModel):
 
     run_id: NonEmptyText
     state: ProgressState
-    rationale: str = ""
+    stage_reached: AttackStage
+    progress_features: dict[str, JsonValue] = Field(default_factory=dict)
+    internal_rationale: str = ""
+    policy_feedback: str = ""
     evidence_ids: tuple[NonEmptyText, ...] = ()
     metadata: dict[str, JsonValue] = Field(default_factory=dict)
 

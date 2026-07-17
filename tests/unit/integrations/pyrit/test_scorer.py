@@ -6,7 +6,7 @@ import pytest
 from pyrit.executor.attack import AttackScoringConfig
 from pyrit.models import MessagePiece, Score
 
-from agentsec_eval.assertions import ProgressDecision, ProgressState
+from agentsec_eval.assertions import AttackStage, ProgressDecision, ProgressState
 from agentsec_eval.integrations.pyrit import AssertionBackedPyRITScorer
 
 pytestmark = pytest.mark.pyrit
@@ -24,10 +24,19 @@ class DecisionOracle:
 
 def make_decision(state: ProgressState, *, run_id: str = "run-1") -> ProgressDecision:
     evidence_ids = ("receiver-event-1",) if state is ProgressState.OBJECTIVE_ACHIEVED else ()
+    stage_by_state = {
+        ProgressState.CONTINUE: AttackStage.DELIVERED,
+        ProgressState.OBJECTIVE_ACHIEVED: AttackStage.EFFECT,
+        ProgressState.TERMINAL_BLOCKED: AttackStage.ATTEMPTED,
+        ProgressState.INVALID_RUN: AttackStage.NONE,
+    }
     return ProgressDecision(
         run_id=run_id,
         state=state,
-        rationale=f"Decision for {state.value}",
+        stage_reached=stage_by_state[state],
+        progress_features={"receiver_checked": True},
+        internal_rationale=f"Internal decision for {state.value}; canary=secret-canary-1",
+        policy_feedback=f"Policy feedback for {state.value}",
         evidence_ids=evidence_ids,
         metadata={"receiver": "mock"},
     )
@@ -87,6 +96,7 @@ def test_scorer_preserves_project_state_in_true_false_score(
     assert metadata["agentsec_eval_schema_version"] == 1
     assert metadata["run_id"] == "run-1"
     assert metadata["progress_state"] == state.value
+    assert metadata["stage_reached"] == decision.stage_reached.value
     assert metadata["terminal"] == str(terminal).lower()
     assert metadata["stop_reason"] == stop_reason
     assert metadata["invalid_run"] == str(invalid_run).lower()
@@ -100,6 +110,7 @@ def test_cross_run_oracle_decision_becomes_invalid_without_foreign_evidence() ->
     foreign_decision = ProgressDecision(
         run_id="run-2",
         state=ProgressState.OBJECTIVE_ACHIEVED,
+        stage_reached=AttackStage.EFFECT,
         evidence_ids=("run-2-secret-evidence",),
     )
 
@@ -118,6 +129,27 @@ def test_cross_run_oracle_decision_becomes_invalid_without_foreign_evidence() ->
     assert normalized.run_id == "run-1"
     assert normalized.evidence_ids == ()
     assert "run-2-secret-evidence" not in serialized_decision
+
+
+def test_scorer_exposes_only_sanitized_policy_feedback_as_rationale() -> None:
+    decision = ProgressDecision(
+        run_id="run-1",
+        state=ProgressState.CONTINUE,
+        stage_reached=AttackStage.ATTEMPTED,
+        internal_rationale="Receiver did not observe secret-canary-1 at /private/effects/run-1",
+        policy_feedback="The objective has not been confirmed.",
+    )
+
+    score, _ = score_decision(decision)
+
+    assert score.score_rationale == "The objective has not been confirmed."
+    assert "secret-canary-1" not in (score.score_rationale or "")
+    metadata = score.score_metadata
+    assert metadata is not None
+    serialized_decision = metadata["progress_decision"]
+    assert isinstance(serialized_decision, str)
+    recovered = ProgressDecision.model_validate_json(serialized_decision)
+    assert "secret-canary-1" in recovered.internal_rationale
 
 
 def test_scorer_rejects_blank_bound_run_id() -> None:

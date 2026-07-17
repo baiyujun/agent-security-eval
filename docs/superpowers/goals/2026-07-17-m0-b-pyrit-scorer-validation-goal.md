@@ -10,7 +10,8 @@
 
 A project-owned, PyRIT-independent Progress Oracle decision is translated by one
 `AssertionBackedPyRITScorer` into PyRIT `0.14.0` true/false semantics without losing terminal,
-invalid-run, evidence, or Run identity state.
+invalid-run, attack-stage, progress-feature, evidence, or Run identity state, including on the
+public blocked/error scoring path.
 
 ## Goal Definition
 
@@ -26,8 +27,9 @@ invalid-run, evidence, or Run identity state.
 - **Deferred work**:
   - M0-C reads terminal metadata and actually stops the attack loop.
   - A separate post-PR-#5 update records the PyRIT validation result in `references/manifest.yaml`.
-- **Verification rule**: all seven acceptance tests, dependency-boundary tests, existing M0-A tests,
-  Ruff, formatting, MyPy, the dedicated M0-B CI job, and the unchanged M0-A Docker job pass.
+- **Verification rule**: all acceptance tests, including public blocked/error paths and feedback
+  separation, dependency-boundary tests, existing M0-A tests, Ruff, formatting, MyPy, the dedicated
+  M0-B CI job, and the unchanged M0-A Docker job pass.
 - **Evidence source**: public PyRIT `0.14.0` types, deterministic test Oracle/Mock Receiver, real
   `Score` objects, concurrent scorer calls, and GitHub Actions.
 - **Pass criteria**: every approved state maps exactly; cross-Run decisions become explicit
@@ -43,6 +45,25 @@ invalid-run, evidence, or Run identity state.
 - Existing frozen models reject mutation but still accept extra fields and blank IDs.
 - PyRIT is not installed by the core package; audited development sources are not a stable API.
 - Scenario/Benchmark work continues independently in Draft PR #5.
+- Draft PR #7 currently proves normal-response mapping but PyRIT's metadata-free fallback bypasses
+  the Oracle for realistic error-typed blocked/error pieces.
+
+## Plan Rewrite Notes
+
+| Existing item | Decision | Reason |
+|---|---|---|
+| Four-state Boolean mapping | keep | Existing mapping is correct and remains the compatibility core. |
+| Piece-level scorer proof | rewrite | Public message scoring must own blocked/error handling before PyRIT fallback. |
+| Minimal decision shape | extend | Stage and progress features must enter the unmerged v1 contract before M0-C. |
+| `rationale` to `score_rationale` | replace | Internal evidence detail is not safe adversarial feedback. |
+| Attack Strategy execution | keep deferred | The correction proves the scorer boundary without implementing M0-C. |
+
+## Drift Diagnosis
+
+- **Validation drift**: the original unit mapping used `_score_piece_async()` and missed the public
+  fallback path.
+- **Compatibility drift**: the draft v1 metadata omitted the Turn stage needed by M0-C.
+- **Security drift**: one rationale field served both trusted audit and adversarial feedback.
 
 ## Priority Rationale
 
@@ -142,6 +163,31 @@ invalid-run, evidence, or Run identity state.
     - **Depends on**: final results.
 - **Exit proof**: Draft PR has passing `quality`, `m0a-docker`, and `m0b-pyrit` jobs.
 - **Stop condition**: any excluded file or scenario asset must change.
+
+### Phase 5: Review-blocking scorer correction
+
+- **Purpose**: close the public blocked/error path and freeze the complete pre-M0-C decision shape.
+- **Entry condition**: PR #7 remains Draft and its current tree is backed up locally.
+- **Phase rules**:
+  - No Attack Strategy, PromptTarget, or policy loop implementation.
+  - PyRIT types remain confined to `agentsec_eval.integrations.pyrit`.
+  - Internal rationale must never populate `Score.score_rationale`.
+- **Todos**:
+  - [ ] RED-test public blocked, partial-blocked, other-error, and invalid decision paths.
+    - **Surface**: M0-B integration tests.
+    - **Proof**: current PyRIT fallback returns metadata-free false scores and skips Oracle calls.
+    - **Depends on**: none.
+  - [ ] Add `AttackStage`, progress features, internal rationale, and policy feedback.
+    - **Surface**: assertion contract and unit tests.
+    - **Proof**: complete decision JSON round-trips the typed fields.
+    - **Depends on**: contract RED.
+  - [ ] Route message-level scoring through the Oracle and expose only policy feedback.
+    - **Surface**: PyRIT adapter and compatibility tests.
+    - **Proof**: all public-path scores retain complete project metadata; secret rationale is absent
+      from `score_rationale`.
+    - **Depends on**: public-path RED and complete decision contract.
+- **Exit proof**: all local gates and PR #7's three CI jobs pass on the corrected Head.
+- **Stop condition**: the fix requires an Attack Strategy or changes a scenario/Benchmark asset.
 
 ## Dry-Run Findings
 

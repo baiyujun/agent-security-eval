@@ -32,9 +32,17 @@ PromptTarget runs in this milestone.
 - `TERMINAL_BLOCKED`
 - `INVALID_RUN`
 
-`ProgressDecision` contains a non-empty `run_id`, state, rationale, evidence IDs, and JSON metadata.
-It is immutable and forbids extra fields. `OBJECTIVE_ACHIEVED` requires evidence because text alone
-cannot prove an environmental effect. The two terminal non-success states remain distinguishable.
+`AttackStage` has the ordered vocabulary `NONE`, `DELIVERED`, `INFLUENCED`, `ATTEMPTED`, `EXECUTED`,
+and `EFFECT`. `ProgressDecision` contains a non-empty `run_id`, state, required `stage_reached`,
+JSON-compatible `progress_features`, internal rationale, attacker-safe policy feedback, evidence
+IDs, and internal JSON metadata. It is immutable and forbids extra fields. `OBJECTIVE_ACHIEVED`
+requires evidence because text alone cannot prove an environmental effect. The two terminal
+non-success states remain distinguishable.
+
+`internal_rationale` is audit-only and may contain private evidence detail. `policy_feedback` is the
+only decision text allowed in PyRIT `Score.score_rationale`; the Oracle implementation owns its
+sanitization. The complete decision remains in score metadata for trusted project recovery, but an
+Attack Policy must never expose that internal metadata to an adversarial model.
 
 `ProgressOracle.evaluate()` is asynchronous and receives the scorer's explicit bound `run_id` plus
 the candidate response. Implementations may inspect environment state; the response cannot select
@@ -52,7 +60,7 @@ the Run.
 The score metadata schema is version `1` and stores:
 
 - flat scalar fields used later by M0-C: schema version, Run ID, progress state, terminal,
-  stop reason, and invalid-run flag;
+  stop reason, invalid-run flag, and stage reached;
 - the complete `ProgressDecision.model_dump_json()` value for lossless recovery.
 
 PyRIT `0.14.0` constrains metadata values to scalars, so nested project state is JSON text rather
@@ -64,8 +72,12 @@ evidence is discarded.
 
 ## Scorer Shape
 
-`AssertionBackedPyRITScorer` subclasses PyRIT `TrueFalseScorer`, uses a text-only one-piece validator,
-and implements `_score_piece_async()` and `_build_identifier()` using public PyRIT APIs. Each
+`AssertionBackedPyRITScorer` subclasses PyRIT `TrueFalseScorer` and uses a text-only one-piece
+validator. It overrides the protected message-level `_score_async()` extension point so the public
+`score_async()` path always calls the project Oracle for normal, blocked, and other-error
+single-piece responses instead of accepting PyRIT's metadata-free fallback. Blocked
+partial content is passed to the Oracle when present. `_score_piece_async()` remains the required
+piece-level implementation, and `_build_identifier()` uses PyRIT's supported subclass API. Each
 instance requires one non-empty Run ID and one `ProgressOracle`.
 
 `AttackScoringConfig(objective_scorer=scorer)` is the compatibility gate. The adapter does not
@@ -91,3 +103,5 @@ and `m0a-docker` jobs keep installing `.[dev]`; a separate `m0b-pyrit` job insta
 - No Final Assertion Engine or formal security outcome model.
 - No `references/manifest.yaml` change before Draft PR #5 merges.
 - No claim that `False` means safe: terminal metadata must be interpreted by M0-C.
+- No implementation of policy feedback consumption; M0-B only prevents internal rationale from
+  becoming PyRIT adversarial feedback by default.
