@@ -30,9 +30,15 @@ Strategy, policy stopping, PromptTarget, or Final Assertion Engine. See
 
 ## M0-C: PyRIT Attack Policy embedding validation
 
-**Status: not started.**
+**Status: validated locally and on Draft PR #8 CI on 2026-07-17.**
 
-Validate PyRIT as an adaptive policy inside one Run without giving it campaign-level control.
+One project-owned policy now uses the pinned PyRIT `0.14.0` red-teaming lifecycle inside a single
+Run while retaining project control of terminal states and turn budget. It adapts one already-open
+Target Session, stops immediately for objective achievement, terminal block, and invalid Runs,
+records trusted per-turn decisions, and keeps final security truth out of `AttackPolicyResult`.
+Concurrent callers are accepted through a serialized in-process PyRIT Memory Scope; this is a
+safety boundary, not a claim of parallel policy execution. See [the M0-C validation
+report](m0-c-pyrit-policy-validation.md).
 
 ## M1: Batch Security Eval
 

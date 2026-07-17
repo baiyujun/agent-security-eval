@@ -2,16 +2,20 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, JsonValue
+from typing import Annotated
+
+from pydantic import BaseModel, ConfigDict, JsonValue, StringConstraints
 
 from agentsec_eval.domain import ExecutionRunSpec
 from agentsec_eval.targets.protocol import JsonRequestTransport, TargetTurnResult
 
+_NonEmptyText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+
 
 class _OpenSessionResult(BaseModel):
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
-    session_id: str
+    session_id: _NonEmptyText
 
 
 class JsonHttpTargetAdapter:
@@ -51,6 +55,7 @@ class _JsonHttpTargetSession:
         self.session_id = session_id
         self._timeout = timeout
         self._closed = False
+        self._last_turn = 0
 
     async def send(self, message: str) -> TargetTurnResult:
         response = await self._transport.request(
@@ -59,7 +64,13 @@ class _JsonHttpTargetSession:
             {"message": message},
             self._timeout,
         )
-        return TargetTurnResult.model_validate(response)
+        result = TargetTurnResult.model_validate(response)
+        if result.session_id != self.session_id:
+            raise ValueError("Target response does not match the active Session")
+        if result.turn <= self._last_turn:
+            raise ValueError("Target response turn must strictly increase")
+        self._last_turn = result.turn
+        return result
 
     async def close(self) -> None:
         if self._closed:

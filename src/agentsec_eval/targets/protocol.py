@@ -2,26 +2,28 @@
 
 from __future__ import annotations
 
-from typing import Protocol
+from typing import Annotated, Protocol
 
-from pydantic import BaseModel, ConfigDict, JsonValue, PositiveInt
+from pydantic import BaseModel, ConfigDict, JsonValue, PositiveInt, StringConstraints
 
 from agentsec_eval.domain import ExecutionRunSpec
 
+_NonEmptyText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+
 
 class TargetToolCall(BaseModel):
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
-    call_id: str
-    name: str
+    call_id: _NonEmptyText
+    name: _NonEmptyText
     arguments: dict[str, JsonValue]
     result: JsonValue
 
 
 class TargetTurnResult(BaseModel):
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
-    session_id: str
+    session_id: _NonEmptyText
     turn: PositiveInt
     response: str
     tool_calls: tuple[TargetToolCall, ...] = ()
