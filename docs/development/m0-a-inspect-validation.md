@@ -46,6 +46,11 @@ No `inspect_ai._*` module is imported, and no Inspect source is copied.
 
 ## Run Spec to Sample Mapping
 
+`ExecutionScenarioSpec` is the minimal scenario projection consumed by one execution. It is not the
+complete scenario asset model. Complete `BaseScenario` and `ScenarioCase` types belong to the
+Benchmark/scenario-assets module, which is outside M0-A. A later compile or materialization function
+will transform a `ScenarioCase` into an `ExecutionRunSpec` at an explicit boundary.
+
 `execution_run_spec_to_sample()` is a pure one-to-one mapping:
 
 - `Sample.id` equals `ExecutionRunSpec.run_id`;
@@ -181,5 +186,6 @@ Draft PR #4 GitHub Actions results:
   Docker image layers and build cache are outside the Sample runtime-resource assertion.
 - The Compose fixture is resolved from a source checkout and is not packaged as a distributable
   production asset.
-- No Campaign Controller, PyRIT, promptfoo, corpus, persistence, complete outcome model, M0-B, M0-C,
-  or M1 behavior is implemented.
+- No `BaseScenario`, `ScenarioCase`, Scenario Registry, Benchmark Adapter, dataset, Campaign
+  Controller, PyRIT, promptfoo, corpus, persistence, complete outcome model, M0-B, M0-C, or M1
+  behavior is implemented.

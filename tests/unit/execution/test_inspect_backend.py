@@ -6,7 +6,7 @@ from agentsec_eval.domain import (
     AttackCandidate,
     ExecutionBudget,
     ExecutionRunSpec,
-    ScenarioSpec,
+    ExecutionScenarioSpec,
     TargetConfiguration,
 )
 from agentsec_eval.execution import (
@@ -23,7 +23,7 @@ def make_run_spec() -> ExecutionRunSpec:
             adapter="m0a-http",
             version="1",
         ),
-        scenario=ScenarioSpec(
+        scenario=ExecutionScenarioSpec(
             scenario_id="scenario-001",
             user_task="Complete the deterministic three-turn task.",
             canary="canary-run-001",

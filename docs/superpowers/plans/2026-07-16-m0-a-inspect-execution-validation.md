@@ -32,7 +32,7 @@ transport to Inspect's public Sandbox API and owns Store, Solver, Scorer, Task, 
 - Modify: `pyproject.toml`
 
 **Interfaces:**
-- Produces: `TargetConfiguration`, `ScenarioSpec`, `AttackCandidate`, `ExecutionBudget`,
+- Produces: `TargetConfiguration`, `ExecutionScenarioSpec`, `AttackCandidate`, `ExecutionBudget`,
   `ExecutionRunSpec`, `CanonicalTraceEvent`, `validate_trace`.
 
 - [ ] **Step 1: Add dependencies and failing model tests**
@@ -61,7 +61,7 @@ class FrozenModel(BaseModel):
 class ExecutionRunSpec(FrozenModel):
     run_id: str
     target: TargetConfiguration
-    scenario: ScenarioSpec
+    scenario: ExecutionScenarioSpec
     attack_candidate: AttackCandidate
     budget: ExecutionBudget
     repetition_seed: int

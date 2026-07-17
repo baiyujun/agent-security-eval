@@ -82,7 +82,12 @@ All models use Pydantic v2 with `ConfigDict(frozen=True)`. They serialize with
 
 `TargetConfiguration` contains `target_id`, `adapter`, and `version`.
 
-`ScenarioSpec` contains `scenario_id`, `user_task`, and a Sample-unique `canary`.
+`ExecutionScenarioSpec` contains `scenario_id`, `user_task`, and a Sample-unique `canary`. It is the
+minimal scenario projection required by one execution, not the complete scenario asset model.
+
+Complete `BaseScenario` and `ScenarioCase` types belong to the Benchmark/scenario-assets module.
+That module is outside M0-A. A later compile or materialization function will transform one
+`ScenarioCase` into an `ExecutionRunSpec` at an explicit boundary.
 
 `AttackCandidate` contains `candidate_id` and `content`.
 

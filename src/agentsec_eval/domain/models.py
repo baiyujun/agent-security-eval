@@ -21,7 +21,14 @@ class TargetConfiguration(FrozenModel):
     version: str
 
 
-class ScenarioSpec(FrozenModel):
+class ExecutionScenarioSpec(FrozenModel):
+    """Minimal scenario projection required for one execution.
+
+    Complete ``BaseScenario`` and ``ScenarioCase`` types belong to the future
+    Benchmark/scenario-assets boundary. A separate compile or materialization
+    function will later transform a ``ScenarioCase`` into an ``ExecutionRunSpec``.
+    """
+
     scenario_id: str
     user_task: str
     canary: str
@@ -40,7 +47,7 @@ class ExecutionBudget(FrozenModel):
 class ExecutionRunSpec(FrozenModel):
     run_id: str
     target: TargetConfiguration
-    scenario: ScenarioSpec
+    scenario: ExecutionScenarioSpec
     attack_candidate: AttackCandidate
     budget: ExecutionBudget
     repetition_seed: int
