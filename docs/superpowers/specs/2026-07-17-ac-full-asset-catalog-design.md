@@ -1,10 +1,11 @@
-# A/C Full Asset Catalog Design
+# A/C Full Upstream Ledger and Native Asset Catalog Design
 
-- Status: approved for specification review
+- Status: revised for specification review
 - Date: 2026-07-17
 - Baseline: `main@946d2cd7fc1f3819397b491e0bb174a4029696f3`
 - Branch: `codex/ac-full-asset-catalog`
-- Scope: documentation and safe upstream metadata only; no runtime code or native scenario generation
+- Scope: documentation and safe upstream metadata only; no runtime code, implementation plan,
+  upstream index, or native scenario generation
 
 ## Purpose
 
@@ -13,12 +14,13 @@ project has one canonical native scenario asset collection. The 18 existing reco
 conversion and schema validation inputs. They neither set the collection boundary nor form a
 second, smaller dataset.
 
-The change must exhaustively enumerate the locked upstream A/C asset surfaces, reconcile their
-counts, and document how future semantic conversion produces the one canonical collection. It
-must not copy restricted task text, prompts, payloads, fixture contents, solutions, credentials,
-service URLs, evaluator labels, or implementation code.
+The change must exhaustively enumerate the locked upstream A/C benchmark, normal-task fixture,
+attack-taxonomy, Promptfoo generator/delivery, and implementation/source-reference surfaces. It
+must reconcile their counts without calling every ledger row a scenario. It must not copy
+restricted task text, prompts, payloads, fixture contents, solutions, credentials, service URLs,
+evaluator labels, or implementation code.
 
-The governing set relationship is:
+The governing set relationship remains:
 
 ```text
 Validation records ⊂ Canonical full asset catalog
@@ -28,18 +30,59 @@ Validation records contain identifiers and conversion expectations only. Smoke, 
 debug execution select canonical assets by native ID, tag, or filter and never copy scenario
 content.
 
+## Promptfoo Version Decision
+
+`references/manifest.yaml` locks Promptfoo to:
+
+```text
+repository: https://github.com/promptfoo/promptfoo
+commit: fcde2e89a89dc4ca79dcc3012927f50193251759
+package version: 0.121.19
+role: attack candidate generator
+```
+
+The local repository is a complete clone: it is neither shallow nor partial and contains the
+locked commit. A detached read-only checkout of that commit was scanned. The source contains the
+planned Coding Agent and MCP plugins, Plugin collections and aliases, static and adaptive Strategy
+registries, and Meta, Hydra, and Goblin providers. No version relock is required before catalog
+implementation. Git describes the fixed commit as `0.121.19-2-gfcde2e89a`; the commit is the lock,
+not the release tag or mutable package version.
+
+The locked source, not the online documentation, is authoritative. Its registry contains:
+
+- 155 concrete Plugin IDs;
+- 16 Plugin Collection IDs;
+- 121 alias selector IDs, with `bias` also present as a Collection, producing 291 unique accepted
+  Plugin selectors;
+- 13 concrete Coding Agent Plugin IDs;
+- 6 IDs in the source-defined MCP Plugin set;
+- 91 concrete Plugin IDs marked remote-only by the locked source;
+- 10 concrete dataset-backed Plugin IDs;
+- 37 accepted Strategy IDs;
+- one additional registry-only deprecated `simba` no-op, producing 38 Strategy ledger records;
+- one Strategy collection, `other-encodings`, which expands to `camelcase`, `morse`, `piglatin`, and
+  `emoji`; and
+- two accepted Plugin aliases, `nist:ai` and `personal-safety`, with no expansion mapping at this
+  commit. They remain visible and are classified `unsupported`; they are not silently dropped.
+
+The Strategy source also exposes three accepted IDs that are not concrete registry entries:
+`default` is a preset, `other-encodings` is a collection, and deprecated `multilingual` is handled
+outside the main Strategy registry. Conversely, `simba` remains in the registry but is absent from
+the accepted Strategy constant and returns no cases. The ledger records these distinctions through
+`source_asset_kind`.
+
 ## Approaches Considered
 
-### A. Record-level exhaustive index
+### A. One role-aware record ledger
 
-Create one JSONL line for every real upstream task, embedded sample, task directory, structured
-attack record, or declared taxonomy-only attack asset in the locked discovery surfaces. Index the
-already audited Harbor and MCP-Universe implementation/source references separately without
-calling them scenarios.
+Create one JSONL line for every upstream benchmark record, normal task fixture, taxonomy record,
+accepted Promptfoo Plugin selector, accepted Promptfoo Strategy identifier, registry-only Strategy
+stub, or locked implementation/source reference. Preserve the upstream unit of identity and assign
+every line an explicit role and source kind.
 
-- Advantages: preserves the upstream unit of identity, proves complete discovery, supports
-  one-to-one conversion accounting, and does not inflate counts with support files.
-- Cost: each source family needs an explicit discovery and digest rule.
+- Advantages: proves full discovery, keeps one ledger, distinguishes scenarios from capabilities
+  and references, and supports one-to-one conversion accounting.
+- Cost: every source family needs an explicit discovery, digest, role, and conversion rule.
 - Decision: adopt this approach.
 
 ### B. File-level exhaustive index
@@ -47,17 +90,18 @@ calling them scenarios.
 Index every file under the relevant upstream directories.
 
 - Advantage: mechanically simple traversal.
-- Rejected because: orchestration YAML, scripts, fixtures, solutions, experiment rows, and task
-  records would become indistinguishable. Counts would describe repository layout rather than
-  scenario assets and could mislabel framework source as data.
+- Rejected because: orchestration YAML, scripts, fixtures, solutions, experiment rows, task records,
+  and implementation files would become indistinguishable. Counts would describe repository layout
+  rather than source assets.
 
-### C. Concept or taxonomy index
+### C. Benchmark-only or concept-only index
 
-Index only representative categories and attack concepts.
+Index only benchmark records or representative attack concepts.
 
-- Advantage: small review surface.
-- Rejected because: it collapses hundreds of distinct upstream records, repeats the original
-  sampling error, and cannot prove discovery or conversion count conservation.
+- Advantage: smaller review surface.
+- Rejected because: it omits the already approved Promptfoo candidate-generation role, collapses
+  distinct upstream records, repeats the original sampling error, and cannot prove discovery or
+  conversion count conservation.
 
 ## One Asset Flow
 
@@ -67,22 +111,22 @@ There is exactly one ingestion flow:
 Locked Upstream Sources
   -> Full Discovery
   -> Full Upstream Asset Index
-  -> Semantic Conversion
+  -> Semantic Conversion or Capability Adaptation
   -> Canonical Native Scenario Assets
   -> Evaluation-Time Selection
 ```
 
-`references/upstream-index/ac-upstream-asset-index.jsonl` is a safe metadata ledger, not a native
-dataset. `references/validation-selection/ac-conversion-validation.yaml` identifies records used to
-exercise importer and schema behavior, not a sample dataset. Future native assets have exactly one
-root and identity boundary:
+`references/upstream-index/ac-upstream-asset-index.jsonl` is one safe upstream metadata ledger, not
+a native dataset. `references/validation-selection/ac-conversion-validation.yaml` identifies
+records used to exercise importer and schema behavior, not a sample dataset. Future native assets
+have exactly one root and identity boundary:
 
 ```text
 assets/scenarios/{native_asset_id}/
 ```
 
 This task documents that boundary but does not create `assets/scenarios/` or assign native asset
-IDs. Every index line therefore has `native_asset_id: null`.
+IDs. Every ledger line therefore has `native_asset_id: null`.
 
 Formal evaluation defaults to:
 
@@ -91,38 +135,126 @@ all assets where status=validated and eval_eligible=true
 ```
 
 CI, smoke, regression, and debugging may select a subset only by referencing native IDs, tags, or
-filters over the same canonical collection. No selection may duplicate scenario content.
+filters over the same canonical collection. No selection may duplicate scenario content. The
+project does not create `benchmark_dataset/`, `promptfoo_dataset/`, `small_dataset/`, or
+`full_dataset/`.
 
-## Discovery Boundaries and Expected Counts
+## Record Roles
 
-All checkouts are read-only inputs. Before discovery, each checkout must exist, be clean, and match
-the repository and commit in `references/source-locks/ac-reference-sources.yaml`.
+Every ledger row has exactly one `record_role`:
 
-| Source | Discovery unit | Count | Index role |
+- `benchmark_scenario`: an upstream security benchmark task or structured attack scenario;
+- `normal_task_fixture`: a normal task/environment unit that can anchor a future security case;
+- `attack_taxonomy`: an attack category without a record-level executable scenario;
+- `generator_plugin`: a concrete Promptfoo Plugin, Collection, or alias selector;
+- `delivery_strategy`: a Promptfoo Strategy, preset, collection, alias, or deprecated stub;
+- `implementation_reference`: implementation evidence that is not scenario data; or
+- `source_reference`: provenance, license, configuration, or framework-source evidence that is not
+  scenario data.
+
+`source_asset_kind` refines the role. Promptfoo values include `plugin`, `plugin_collection`,
+`plugin_alias`, `strategy`, `strategy_preset`, `strategy_collection`, `strategy_alias`, and
+`deprecated_strategy_stub`. Reference values distinguish source code, configuration, license, and
+documentation evidence. A role changes neither the source identity nor the one-ledger rule.
+
+## Discovery Boundaries and Counts
+
+All checkouts are read-only inputs. Before discovery, each checkout must exist, be clean, be a
+complete non-partial clone, and match its locked repository and commit. The A/C benchmark locks come
+from `references/source-locks/ac-reference-sources.yaml`; the Promptfoo capability lock comes from
+`references/manifest.yaml`.
+
+| Source | Discovery unit | Count | Record role |
 |---|---|---:|---|
-| SABER | Every JSON task represented by `dataset/manifest.json` and present under `tasks/` | 716 | Upstream A-class task records |
-| Inspect Evals / CodeIPI | Every embedded record in `src/inspect_evals/ipi_coding_agent/dataset/samples.json` | 45 | Upstream A-class task records |
-| Terminal-Bench 2 | Every top-level task directory at the locked commit | 89 | Upstream A-class task records |
-| MCP-SafetyBench | Every JSON attack task under `mcpuniverse/benchmark/configs/test/*/*.json` | 245 | Upstream C-class task records |
-| MCPSecBench | 11 structured `data/data.json` records plus 6 taxonomy-only declared attack categories | 17 | Upstream C-class attack assets |
-| Harbor | The 8 files already named in the source lock's `audited_files` | 8 | Implementation references only |
-| MCP-Universe | The 15 files already named in the source lock's `audited_files` | 15 | Source and implementation references only |
-| **Total** |  | **1135** |  |
+| SABER | Every JSON task reconciled between `dataset/manifest.json` and `tasks/` | 716 | `benchmark_scenario` |
+| Inspect Evals / CodeIPI | Every embedded record in `src/inspect_evals/ipi_coding_agent/dataset/samples.json` | 45 | `benchmark_scenario` |
+| Terminal-Bench 2 | Every top-level task directory at the locked commit | 89 | `normal_task_fixture` |
+| MCP-SafetyBench | Every JSON attack task under `mcpuniverse/benchmark/configs/test/*/*.json` | 245 | `benchmark_scenario` |
+| MCPSecBench structured | Every structured record in `data/data.json` | 11 | `benchmark_scenario` |
+| MCPSecBench taxonomy | Every declared category not represented by a structured record | 6 | `attack_taxonomy` |
+| Promptfoo Plugin selectors | 155 concrete IDs, 16 Collections, and 120 alias-only selectors | 291 | `generator_plugin` |
+| Promptfoo Strategy identifiers | 37 accepted IDs plus registry-only deprecated `simba` | 38 | `delivery_strategy` |
+| Harbor | The 8 files named in its source-lock `audited_files` | 8 | `implementation_reference` |
+| MCP-Universe | The 15 files named in its source-lock `audited_files` | 15 | `source_reference` |
+
+The role coverage derived from those discovery results is:
+
+```yaml
+coverage_summary:
+  benchmark_scenario_records: 1017
+  normal_task_fixture_records: 89
+  attack_taxonomy_records: 6
+  generator_plugin_records: 291
+  delivery_strategy_records: 38
+  implementation_reference_records: 8
+  source_reference_records: 15
+  ledger_total: 1464
+```
+
+`ledger_total` is generated by summing role counts. It is not a scenario count and must not be a
+handwritten generator constant. The observed value for the locked commits is 1464. Before Promptfoo
+was added, 1135 meant 1112 benchmark/task/taxonomy source records plus 23 references; it never meant
+1135 executable security scenarios. The revised ledger contains 1017 benchmark-scenario records,
+89 normal-task fixtures, 329 Promptfoo Plugin/Strategy capability records, and 23 reference-only
+records, with 6 taxonomy records accounting for the remainder.
 
 MCP-SafetyBench dataset YAML files are orchestration manifests and do not become additional task
-records. Supporting source files do not become task records. Harbor and MCP-Universe are indexed
-only in their established reference roles; their framework files must never be represented as
-scenario data.
+records. Supporting source files do not become task records. Harbor and MCP-Universe remain in
+their established reference roles; their framework files must never be represented as scenarios.
 
 SABER has a stronger reconciliation gate. Its manifest must contain 716 unique task IDs, the task
 tree must contain 716 parseable JSON records, and the two ID sets must have no missing, extra, or
 duplicate IDs. The expected scenario split is A=289, B=186, and C=241. Any mismatch fails generation
 and reports the concrete IDs.
 
+## Promptfoo Full Discovery
+
+Promptfoo discovery parses source registries without importing or executing upstream modules. The
+authoritative surfaces are:
+
+- `src/redteam/constants/plugins.ts` for concrete Plugin IDs, Collections, remote-only markers,
+  dataset-backed markers, and MCP group membership;
+- `src/redteam/constants/codingAgents.ts` for Coding Agent IDs and Collection expansion;
+- `src/redteam/constants/frameworks.ts` for Plugin aliases and alias-to-Plugin/Strategy expansion;
+- `src/redteam/constants/strategies.ts` for accepted Strategy IDs, presets, collections, remote
+  requirements, and multi-turn/agentic groups;
+- `src/redteam/strategies/index.ts` for concrete Strategy registry entries and deprecated stubs;
+- the referenced Plugin/Strategy/provider modules for local generation, target feedback, state,
+  remote inference, and runtime ownership; and
+- root and nested license or dataset provenance files for code and embedded-data disposition.
+
+One `generator_plugin` row is emitted for each unique accepted Plugin selector. When an ID appears
+in more than one selector class, one row is emitted with the runtime-precedence kind. At the locked
+commit, `bias` is both an alias and a Collection, so it emits one `plugin_collection` row. Concrete
+Plugin IDs, Collections, aliases, and expansion relations are therefore complete without double
+counting.
+
+One `delivery_strategy` row is emitted for each accepted Strategy ID plus a separate unsupported
+row for the registry-only `simba` stub. Presets, collections, and aliases retain their expansion or
+alias relation; they do not become independent native implementations.
+
+Every Promptfoo capability row records:
+
+- the concrete ID and `source_asset_kind`;
+- Collection membership, alias target, or expansion members;
+- local-only, local-or-remote, or remote-only generation dependency;
+- whether target feedback is required;
+- `state_scope` as `none`, `per_candidate`, `per_run`, or `cross_run`;
+- whether remote inference is required;
+- current runtime ownership as `project` or `promptfoo_bound`;
+- Repo/Shell, MCP, and future-domain applicability;
+- root license and any embedded dataset or prompt-source provenance;
+- native reuse classification; and
+- grader bindings as `AUXILIARY_EVIDENCE` only.
+
+The scan does not count Target Providers, the complete Eval Runtime, Campaign lifecycle, or graders
+as generator or delivery capabilities. A grader binding may be recorded on its Plugin/Strategy row,
+but it can never become the project Oracle.
+
 ## Index Contract
 
 `references/upstream-index/ac-upstream-asset-index.jsonl` contains one JSON object per discovery
-unit. Every object contains all of these fields:
+unit. Every object contains these common fields:
 
 ```json
 {
@@ -132,45 +264,216 @@ unit. Every object contains all of these fields:
   "source_path": "",
   "source_record_key": "",
   "source_record_digest": "",
+  "record_role": "",
+  "source_asset_kind": "",
   "asset_family": "",
   "scenario_class": "",
   "category": "",
   "attack_present": null,
   "attack_origin": null,
   "attack_delivery_mode": null,
-  "conversion_status": "",
+  "raw_reuse_disposition": "",
+  "native_conversion_disposition": "",
   "conversion_reason": "",
-  "license_disposition": "",
   "native_asset_id": null
 }
 ```
 
 Paths are repository-relative POSIX paths. Digests are lowercase 64-character SHA-256 hex values.
-The three attack fields are populated only when the upstream metadata supports the claim; absence
-or ambiguity remains JSON `null`. Reference-only rows use `scenario_class: "reference_only"` and
-an `asset_family` that explicitly names `implementation_reference` or `source_reference`.
+The three attack fields are populated only when upstream metadata supports the claim; absence or
+ambiguity remains JSON `null`. Reference-only rows use `scenario_class: "reference_only"`.
 
-Lines are deterministic: source projects follow source-lock order, then records sort by
-`source_path` and `source_record_key`. JSON uses UTF-8, sorted keys, compact separators, and one
+Promptfoo Strategy rows additionally require non-null values for:
+
+```json
+{
+  "requires_target_feedback": false,
+  "state_scope": "none",
+  "remote_inference_required": false,
+  "runtime_ownership": "project",
+  "reuse_classification": "GENERATOR_ADAPTER_REUSE"
+}
+```
+
+For non-Strategy rows, these fields are present with JSON `null`, so the ledger has one stable
+schema. Every Promptfoo capability row also has these exact fields:
+
+```json
+{
+  "plugin_collection_ids": [],
+  "expands_to_plugin_ids": [],
+  "expands_to_strategy_ids": [],
+  "alias_of": null,
+  "generation_dependency": "local_only|local_or_remote|remote_only|not_applicable",
+  "repo_shell_applicable": null,
+  "mcp_applicable": null,
+  "future_domain_only": null,
+  "embedded_data_sources": [],
+  "embedded_data_license_disposition": "",
+  "grader_disposition": "AUXILIARY_EVIDENCE"
+}
+```
+
+Non-Promptfoo rows use null or empty values for these fields. Expansion arrays contain IDs only,
+not upstream prompt content. `embedded_data_sources` contains safe path, repository, commit, and
+license metadata only.
+
+Lines are deterministic: source projects follow lock order, then records sort by `record_role`,
+`source_path`, and `source_record_key`. JSON uses UTF-8, sorted keys, compact separators, and one
 trailing newline per object. The index includes no host absolute path or scan timestamp.
 
-`conversion_status` is one of the mutually exclusive coverage dispositions:
+## License and Native Conversion
 
-- `convertible`
-- `blocked_by_license`
+Raw reuse and native conversion are independent dimensions.
+
+`raw_reuse_disposition` is one of:
+
+- `allowed`
+- `review_required`
+- `prohibited`
+- `not_applicable`
+
+It answers whether upstream raw content can be copied or redistributed. Promptfoo's root MIT license
+does not automatically cover every embedded dataset, generated output, model service, or third-party
+prompt source; those are recorded per capability.
+
+`native_conversion_disposition` is one of:
+
+- `eligible_for_semantic_reconstruction`
+- `direct_import_allowed`
+- `generator_adapter_candidate`
+- `policy_adapter_candidate`
+- `design_reference_only`
 - `unsupported`
 - `duplicate`
 - `intentionally_excluded`
 - `malformed`
 - `conversion_failed`
 
-`conversion_reason` states the concrete reason for the disposition. `license_disposition` records
-the applicable source-lock decision independently from conversion status. No row in this task is a
-completed native conversion.
+It answers how the project may build or adapt native behavior. A restricted raw-reuse disposition
+does not prevent project-authored semantic reconstruction. In particular, SABER, CodeIPI,
+Terminal-Bench 2, MCP-SafetyBench, and structured MCPSecBench records are
+`eligible_for_semantic_reconstruction` even when raw reuse requires review.
+
+For example:
+
+```yaml
+saber:
+  raw_reuse_disposition: review_required
+  native_conversion_disposition: eligible_for_semantic_reconstruction
+```
+
+The initial native-conversion accounting for the locked ledger is:
+
+```yaml
+native_conversion_summary:
+  eligible_for_semantic_reconstruction: 1106
+  direct_import_allowed: 0
+  generator_adapter_candidate: 181
+  policy_adapter_candidate: 10
+  design_reference_only: 162
+  unsupported: 3
+  duplicate: 2
+  intentionally_excluded: 0
+  malformed: 0
+  conversion_failed: 0
+```
+
+This accounting comprises:
+
+- 1106 benchmark scenarios and normal-task fixtures eligible for project-authored reconstruction;
+- 6 MCPSecBench taxonomy inputs as generator candidates;
+- 154 concrete Promptfoo generator Plugins plus 21 Strategy generator candidates;
+- `agentic:memory-poisoning` plus 9 Strategy policy candidates;
+- 16 Plugin Collections, 118 mapped alias-only selectors, 5 Strategy design references, and 23
+  Harbor/MCP-Universe references as design-only evidence;
+- 2 unmapped Plugin aliases plus `simba` as unsupported; and
+- 2 deprecated Strategy aliases as duplicates of their canonical Strategy IDs.
+
+Raw reuse counts are reported separately and are derived only after each Promptfoo embedded-data
+and remote-generation provenance check. They do not enter native-conversion conservation.
+
+## Promptfoo Strategy Decisions
+
+The ledger applies the strongest behavior in a preset or composition: if any expansion may call a
+target, require remote inference, or carry cross-Run state, the selector row records that stronger
+property. This fail-closed rule prevents a mixed selector from being approved as a static adapter.
+
+| Strategy IDs | Count | Target feedback | State scope | Remote inference | Runtime ownership | Native conversion |
+|---|---:|---:|---|---:|---|---|
+| `base64`, `basic`, `camelcase`, `emoji`, `hex`, `homoglyph`, `image`, `jailbreak-templates`, `leetspeak`, `morse`, `other-encodings`, `piglatin`, `rot13`, `video` | 14 | no | `none` | no | `project` | `generator_adapter_candidate` |
+| `audio`, `citation`, `gcg`, `jailbreak:composite`, `jailbreak:likert` | 5 | no | `per_candidate` | yes | `project` | `generator_adapter_candidate` |
+| `math-prompt`, `multilingual` | 2 | no | `per_candidate` | no | `project` | `generator_adapter_candidate` |
+| `prompt-injection` | 1 | no | `none` | no | `project` | `duplicate` of `jailbreak-templates` |
+| `authoritative-markup-injection`, `best-of-n`, `goat`, `indirect-web-pwn`, `jailbreak:meta` | 5 | yes | `per_run` | yes | `promptfoo_bound` | `policy_adapter_candidate` |
+| `crescendo`, `custom`, `jailbreak:tree`, `mischievous-user` | 4 | yes | `per_run` | no | `promptfoo_bound` | `policy_adapter_candidate` |
+| `default` | 1 | yes | `per_run` | yes | `promptfoo_bound` | `design_reference_only` mixed preset |
+| `layer`, `jailbreak:goblin`, `jailbreak:hydra` | 3 | yes | `cross_run` | yes | `promptfoo_bound` | `design_reference_only` |
+| `retry` | 1 | yes | `cross_run` | no | `promptfoo_bound` | `design_reference_only` |
+| `jailbreak` | 1 | yes | `per_run` | yes | `promptfoo_bound` | `duplicate` of `jailbreak:meta` |
+| `simba` | 1 | no | `none` | no | `project` | `unsupported` registry-only no-op |
+
+The 37 accepted IDs therefore contain 22 target-independent generation/static IDs and 15 IDs that
+require target feedback or prior target results. Four IDs can carry cross-Run state:
+`jailbreak:hydra`, `jailbreak:goblin` through Hydra inheritance, `layer` through adaptive provider
+composition, and `retry` through prior-evaluation storage. The 38th ledger row is the unsupported
+`simba` stub.
+
+`GENERATOR_ADAPTER_REUSE` means a project-owned adapter may invoke or independently reproduce only
+the generation/transform phase. `POLICY_ADAPTER_CANDIDATE` means a later adapter must prove that all
+feedback and state stay inside one project Run. `DESIGN_REFERENCE` means no Promptfoo execution path
+is adopted. `REJECT` applies when the capability cannot satisfy project ownership or isolation.
+The ledger maps `generator_adapter_candidate` to `GENERATOR_ADAPTER_REUSE`,
+`policy_adapter_candidate` to `POLICY_ADAPTER_CANDIDATE`, `design_reference_only` and `duplicate` to
+`DESIGN_REFERENCE`, and `unsupported` to `REJECT`.
+
+## Promptfoo Runtime Boundary
+
+Promptfoo may supply attack-generation and transformation capability. It may not own or bypass:
+
+- the Campaign Controller;
+- the Agent Adapter or any Target Provider;
+- Sandbox lifecycle or egress policy;
+- Run-level state isolation;
+- project-native utility and security Oracles;
+- cost, call, turn, or time budgets; or
+- Trace, tool-call, environment-effect, and receiver-side evidence capture.
+
+Adaptive Promptfoo code cannot be reused merely because it exists. A policy candidate must expose
+the next candidate through a narrow project adapter and receive only bounded, attacker-safe feedback
+inside the current Run. It cannot persist state under a Promptfoo scan ID, read prior Eval results,
+or call the target through `context.originalProvider` outside the Agent Adapter.
+
+Hydra, Goblin, generic `layer`, and `retry` are design references at this stage because their locked
+implementations can share scan/evaluation state or depend on Promptfoo-owned result storage. Meta,
+Tree, Crescendo, Custom, GOAT, Best-of-N, Mischievous User, Authoritative Markup Injection, and
+Indirect Web Pwn remain policy candidates only; none is approved for execution by this design.
+
+Promptfoo grader output is `AUXILIARY_EVIDENCE`. It may support triage or progress feedback but may
+not replace the project Final Assertion Engine, utility Oracle, deterministic verifier, or
+receiver/environment effect evidence.
+
+Future attack variants generated through an approved adapter enter the same canonical asset root
+and record at least:
+
+```yaml
+derivation:
+  parent_native_asset_id: ""
+  generator: promptfoo
+  promptfoo_commit: fcde2e89a89dc4ca79dcc3012927f50193251759
+  plugin_id: ""
+  strategy_id: ""
+  attacker_model: ""
+  generation_config_digest: ""
+  random_seed: ""
+  output_digest: ""
+```
+
+This provenance does not create a Promptfoo dataset or second native asset collection.
 
 ## Digest Rules
 
-Digesting identifies the discovered unit without copying its content:
+Digesting identifies each discovery unit without copying its content:
 
 - SABER JSON tasks: SHA-256 of canonical JSON using sorted keys, compact separators, and UTF-8.
 - CodeIPI embedded records: the same canonical JSON digest, one digest per array record.
@@ -181,37 +484,36 @@ Digesting identifies the discovered unit without copying its content:
 - MCPSecBench structured records: the canonical JSON digest of each record.
 - MCPSecBench taxonomy-only assets: SHA-256 of the normalized source path, record key, and declared
   category joined with newline characters.
+- Promptfoo capability records: SHA-256 of a canonical source descriptor containing the ID,
+  source kind, registration path, registry presence, membership/alias/expansion IDs, and source-only
+  dependency flags. Project conversion judgments are excluded from the digest.
 - Harbor and MCP-Universe references: raw file SHA-256.
 
-Source scripts, Dockerfiles, setup commands, evaluators, and cleanup code are never executed while
-discovering or digesting.
+Source scripts, Dockerfiles, setup commands, evaluators, Target Providers, and cleanup code are
+never executed while discovering or digesting.
 
 ## Coverage and Conservation
 
 `references/upstream-index/ac-upstream-coverage.yaml` is derived from the same in-memory record list
-as the JSONL index. It is not maintained as an independent manual count. Every project records:
+as the JSONL ledger. It is not maintained as an independent manual count. Every project records
+`discovered_total`, `indexed_total`, counts by `record_role`, counts by raw-reuse disposition, and
+counts by native-conversion disposition.
 
-```yaml
-source_project:
-  discovered_total:
-  indexed_total:
-  convertible:
-  blocked_by_license:
-  unsupported:
-  duplicate:
-  intentionally_excluded:
-  malformed:
-  conversion_failed:
-```
-
-Two invariants apply to every project:
+Every source satisfies:
 
 ```text
 indexed_total = discovered_total
+```
 
+Native conversion is mutually exclusive and satisfies:
+
+```text
 discovered_total
-= convertible
-+ blocked_by_license
+= eligible_for_semantic_reconstruction
++ direct_import_allowed
++ generator_adapter_candidate
++ policy_adapter_candidate
++ design_reference_only
 + unsupported
 + duplicate
 + intentionally_excluded
@@ -219,23 +521,34 @@ discovered_total
 + conversion_failed
 ```
 
-The initial conservative dispositions are:
+Raw reuse is independently mutually exclusive and satisfies:
 
-| Source | blocked_by_license | unsupported | intentionally_excluded |
-|---|---:|---:|---:|
-| SABER | 716 | 0 | 0 |
-| Inspect Evals / CodeIPI | 45 | 0 | 0 |
-| Terminal-Bench 2 | 89 | 0 | 0 |
-| MCP-SafetyBench | 245 | 0 | 0 |
-| MCPSecBench | 11 | 6 | 0 |
-| Harbor | 0 | 0 | 8 |
-| MCP-Universe | 0 | 0 | 15 |
+```text
+discovered_total
+= allowed
++ review_required
++ prohibited
++ not_applicable
+```
 
-All unlisted dispositions are zero. The 11 structured MCPSecBench records remain license-blocked;
-the 6 taxonomy-only categories are unsupported as record-level conversion inputs. Harbor and
-MCP-Universe references are intentionally excluded from scenario conversion because their role is
-implementation/source evidence. License review may change future conversion eligibility but must
-not change discovery totals for the locked commits.
+Raw-reuse counts never enter the native-conversion equation. Role counts independently sum to
+`ledger_total`. The coverage file preserves these known source reconciliations:
+
+```yaml
+saber: 716
+codeipi: 45
+terminal_bench_2: 89
+mcp_safetybench: 245
+mcpsecbench_structured: 11
+mcpsecbench_taxonomy: 6
+promptfoo_concrete_plugins: 155
+promptfoo_plugin_collections: 16
+promptfoo_alias_only_selectors: 120
+promptfoo_accepted_strategies: 37
+promptfoo_registry_only_strategy_stubs: 1
+harbor_references: 8
+mcp_universe_references: 15
+```
 
 The SABER coverage entry additionally records `expected_upstream_total: 716`. Generation fails if
 its discovered or indexed total differs from 716.
@@ -249,25 +562,29 @@ contexts, assertion applicability, and reconstruction constraints remain intact.
 
 The file and Spike documentation replace dataset-like terms such as `seed selection`, `fixed input
 set`, and `selected candidates` with the precise terms `conversion validation records`, `schema
-validation records`, and `smoke execution IDs`. A validation record may point to an upstream index
+validation records`, and `smoke execution IDs`. A validation record may point to an upstream ledger
 record and a proposed conversion shape, but it may not embed a second copy of a canonical scenario.
 Smoke execution IDs are native asset IDs only and become usable only after those native assets
 exist.
 
 ## Failure Handling
 
-Discovery and index generation fail before replacing committed output when any of these occurs:
+Discovery and ledger generation fail before replacing committed output when any of these occurs:
 
-- a checkout is absent, dirty, detached from the locked commit, or has a different remote identity;
+- a checkout is absent, dirty, shallow, partial, at a different commit, or has a different remote
+  identity;
 - a path is absolute, escapes its checkout, is unreadable, or violates the source-specific shape;
 - SABER manifest and task IDs differ, repeat, or do not total 716;
+- a Promptfoo source registry cannot be parsed without executing upstream code;
+- a Promptfoo selector, alias, Collection, Strategy, preset, or registry-only stub disappears from
+  accounting without an explicit disposition;
 - the same source-project/path/record-key identity is emitted twice without a `duplicate`
   disposition;
 - a required digest is not a valid SHA-256 value;
 - any required JSONL field is absent or has the wrong type;
 - `indexed_total` differs from `discovered_total`;
-- a project's conservation equation fails; or
-- the aggregate index count differs from 1135 for these locked commits.
+- a source's native-conversion or raw-reuse conservation equation fails; or
+- the generated `ledger_total` differs from the sum of generated role counts.
 
 A source record that is itself malformed or unsupported can still be indexed safely with that
 disposition when its path, key, and digest are determinable. An enumeration failure that prevents
@@ -275,22 +592,42 @@ the record from being counted is fatal and cannot be hidden in `malformed`.
 
 ## Verification
 
-Verification uses structured JSON/YAML parsing and checks:
+Verification uses structured JSON, YAML, and TypeScript AST parsing and checks:
 
-1. The JSONL has exactly 1135 parseable objects and every object has exactly the required fields.
-2. Each source count matches the discovery table and every row matches the locked repository and
+1. Every JSONL object has the common schema and Promptfoo Strategy rows have all five required
+   runtime-classification fields.
+2. Role counts sum to `ledger_total`; the locked-source observation is 1464 ledger rows, not 1464
+   scenarios.
+3. Each source count matches the discovery table and every row matches the locked repository and
    commit.
-3. SABER has 716 unique reconciled IDs with the A/B/C split 289/186/241.
-4. Every digest matches a fresh read-only scan of the locked checkout.
-5. Every project satisfies both coverage invariants and the coverage totals equal the JSONL totals.
-6. All `native_asset_id` values are null and no `assets/scenarios/` content is created.
-7. The renamed validation file still has exactly 18 validation records and contains no claim that
+4. SABER has 716 unique reconciled IDs with the A/B/C split 289/186/241.
+5. Promptfoo has 155 concrete Plugin IDs, 291 unique accepted Plugin selectors, 37 accepted
+   Strategy IDs, and one registry-only `simba` stub; Collection and alias expansions reconcile.
+6. Every digest matches a fresh read-only scan of the locked checkout.
+7. Every project satisfies indexed/discovered equality and both independent conservation equations.
+8. All `native_asset_id` values are null and no `assets/scenarios/` content is created.
+9. The renamed validation file still has exactly 18 validation records and contains no claim that
    those records define dataset scope.
-8. Repository search finds no remaining references to the removed import-selection path or the
-   prohibited dataset-like terminology in the changed A/C documents.
-9. The diff touches only documentation and reference metadata; runtime code remains unchanged.
-10. Existing Ruff, formatting, MyPy, non-Docker tests, and PyRIT checks continue to pass.
+10. Repository search finds no remaining references to the removed import-selection path or
+    prohibited dataset-like terminology in the changed A/C documents.
+11. The diff touches only documentation and reference metadata; runtime code remains unchanged.
+12. Existing Ruff, formatting, MyPy, non-Docker tests, and PyRIT checks continue to pass.
 
-The final worktree must be clean after commits. The branch is pushed to the existing GitHub remote
-and opened as a separate Draft PR because this change defines the catalog and ingestion contract;
-it does not claim that canonical native Scenario Packs have been generated.
+The branch is ready for another specification review only after this revision is committed and
+pushed. No implementation plan, upstream JSONL ledger, coverage YAML, or canonical native asset is
+created before that review passes.
+
+## Source Family Decisions
+
+| Source family | Record role | Full discovery | Future native output |
+|---|---|---|---|
+| SABER | benchmark scenario | yes | project-authored scenario |
+| CodeIPI | benchmark scenario | yes | project-authored scenario |
+| Terminal-Bench 2 | normal task fixture | yes | environment/task fixture |
+| MCP-SafetyBench | benchmark scenario | yes | project-authored MCP scenario |
+| MCPSecBench structured | benchmark scenario | yes | project-authored MCP scenario |
+| MCPSecBench taxonomy | attack taxonomy | yes | generator/category input |
+| Promptfoo Plugin | generator plugin | yes | attack-generation capability |
+| Promptfoo Strategy | delivery strategy | yes | transformer or Run policy |
+| Harbor | implementation reference | yes | no scenario |
+| MCP-Universe | source reference | yes | no scenario unless separately approved |
