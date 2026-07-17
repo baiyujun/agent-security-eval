@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 
 import pytest
 
@@ -12,6 +12,7 @@ from agentsec_eval.integrations.pyrit import (
     AttackPolicyStopReason,
     PyRITAttackPolicy,
 )
+from agentsec_eval.targets import TargetTurnResult
 
 from .conftest import (
     AdversarialTargetFactory,
@@ -37,6 +38,7 @@ async def run_owned_policy(
     run_id: str = "run-1",
     target_error_on_turn: int | None = None,
     adversarial_error_on_call: int | None = None,
+    result_factory: Callable[[int, str], TargetTurnResult] | None = None,
 ) -> tuple[
     AttackPolicyResult,
     RecordingTargetSession,
@@ -44,7 +46,11 @@ async def run_owned_policy(
     AdversarialTargetFactory,
     list[CanonicalTraceEvent],
 ]:
-    session = RecordingTargetSession(run_id=run_id, error_on_turn=target_error_on_turn)
+    session = RecordingTargetSession(
+        run_id=run_id,
+        error_on_turn=target_error_on_turn,
+        result_factory=result_factory,
+    )
     oracle = SequenceOracle(list(decisions))
     factory = AdversarialTargetFactory(
         run_id=run_id,
