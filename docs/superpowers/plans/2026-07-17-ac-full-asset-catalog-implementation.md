@@ -12,7 +12,8 @@ detects drift without executing or copying upstream content.
 digests, source-specific discoverers, coverage calculation, deterministic rendering, and one
 `generate`/`check` CLI. Each discoverer emits validated `UpstreamLedgerRecord` objects into one
 in-memory tuple; coverage and both committed outputs derive only from that tuple. Full-checkout
-reconciliation is isolated from hermetic unit tests.
+reconciliation is isolated from Hermetic committed-output validation. Promptfoo source extraction
+and project-owned policy tables live in separate modules and meet only at record construction.
 
 **Tech Stack:** Python 3.11, Pydantic v2, PyYAML 6.0.3, Tree-sitter 0.25.2,
 tree-sitter-typescript 0.23.2, argparse, Pytest, Ruff, strict MyPy, GitHub Actions.
@@ -89,6 +90,26 @@ on a second `check` run.
 - `references/import-selection/ac-seed-selection.yaml` still holds the 18 conversion-validation
   records and is renamed only after the full ledger exists.
 
+## Plan Rewrite Notes
+
+| Existing item | Decision | Reason |
+|---|---|---|
+| Task 6 source-only AST parsing | rewrite | Constant modules and `strategies/index.ts` require different import handling; one rule cannot safely parse both. |
+| Promptfoo policy tables in `discovery/promptfoo.py` | split | Source extraction and project-owned classification have different change reasons and review owners. |
+| Task 10 committed-output assertions in full-checkout integration | move and split | Submitted JSONL/Coverage consistency must run on Hosted CI without upstream checkouts. |
+| Two-file atomic wording | rewrite | Each `os.replace` is atomic, but the pair is not an operating-system transaction across crashes. |
+| Twelve phases and eleven commits | keep | Their dependency order and review boundaries still match the approved target. |
+
+## Drift Diagnosis
+
+- **Goal drift:** None; the target remains one deterministic full upstream ledger.
+- **Phase drift:** None; Task 6 and Task 10 retain their positions and commit boundaries.
+- **Validation drift:** Fixed by adding a Hermetic committed-output test to Hosted CI while keeping
+  source reconciliation in the full-checkout layer.
+- **Compatibility drift:** Fixed by assigning separate import contracts to constant-module and
+  Registry-ID parsing.
+- **Cleanup drift:** None; no unrelated refactor or new runtime/data store is introduced.
+
 ## Priority Rationale
 
 - Models and invariants come first because every discoverer and renderer depends on one stable
@@ -109,7 +130,7 @@ on a second `check` run.
 | Promptfoo checkout locator | confirmed | Add only `local_checkout: ../reference-sources/promptfoo-locked-fcde2e89` to its existing manifest entry; repository, commit, role, and reuse decisions remain single-sourced there. |
 | CLI surface | confirmed | Add one `agentsec-reference-catalog` command with exactly `generate` and `check` subcommands. |
 | Full-checkout tests | confirmed | Mark with `integration` and `reference_catalog`; default CI excludes the latter and a dedicated command runs it where checkouts exist. |
-| Atomicity | confirmed | Discover, validate, cover, and render fully in memory; stage both outputs, fsync, and use per-file `os.replace`, with rollback on a Python-level second-file failure. No write occurs before every source succeeds. |
+| Two-file replacement | confirmed | Use transactional two-file replacement with staged writes, Python-level rollback, and committed-pair consistency validation. Each `os.replace` is atomic; the pair is not crash-atomic. |
 | Ambiguous applicability | confirmed | Preserve JSON `null` when source evidence and approved project rules do not establish Repo/Shell, MCP, or future-domain applicability; never guess from an ID string. |
 
 ## TypeScript Parser Decision
@@ -124,12 +145,19 @@ Three options were evaluated:
 3. **Regex/text extraction (rejected).** It cannot safely distinguish comments, strings, spreads,
    nested mappings, aliases, or computed expressions and violates the approved parser constraint.
 
-The Tree-sitter adapter accepts only string/number/boolean/null literals, arrays, object literals,
-spread references to allowlisted exported constants, `as const`/`satisfies` wrappers,
-`Object.keys(ALLOWLISTED_OBJECT)`, `new Set(ALLOWLISTED_ARRAY)`, spreads of that static Set, and the
-exact `Array.from(new Set(ALLOWLISTED_ARRAY)).sort()` shape used by the locked registries. Any parse
-error, missing export, unresolved identifier, unsupported call/expression, or changed registry
-shape raises `TypeScriptShapeError`. The adapter never evaluates an AST node.
+The Tree-sitter adapter has two modes. Static Constant Module mode accepts only
+string/number/boolean/null literals, arrays, object literals, spread references to allowlisted
+exported constants, `as const`/`satisfies` wrappers, `Object.keys(ALLOWLISTED_OBJECT)`,
+`new Set(ALLOWLISTED_ARRAY)`, spreads of that static Set, and the exact
+`Array.from(new Set(ALLOWLISTED_ARRAY)).sort()` shape used by the locked constants. Its imports may
+resolve only among the four explicitly approved constant modules.
+
+Registry ID mode applies only to `src/redteam/strategies/index.ts`. It permits arbitrary static
+`import` and `import type` declarations but never resolves, follows, loads, or executes them. It
+locates the exported `Strategies` array and reads only literal string `id` properties. Other object
+properties and their subtrees are opaque. A non-array Registry, non-object element, missing or
+non-string `id`, or spread element fails closed. In either mode, any relevant parse error or changed
+approved shape raises `TypeScriptShapeError`; no AST node is evaluated.
 
 ## Planned Package Layout
 
@@ -142,7 +170,8 @@ src/agentsec_eval/reference_catalog/
 |-- digest.py                   # Source-only deterministic digest algorithms
 |-- validation.py               # Cross-record uniqueness and output-safety checks
 |-- coverage.py                 # Counts and independent conservation
-|-- rendering.py                # Stable JSONL/YAML bytes and atomic replacement
+|-- rendering.py                # Stable bytes and transactional two-file replacement
+|-- promptfoo_policy.py         # Typed project-owned Promptfoo policy/evidence tables
 |-- generation.py               # Verify -> discover -> validate -> cover -> render orchestration
 |-- cli.py                      # The generate/check command boundary
 `-- discovery/
@@ -171,6 +200,8 @@ tests/unit/reference_catalog/
 |-- test_mcp_safetybench_discovery.py
 |-- test_mcpsecbench_discovery.py
 |-- test_promptfoo_discovery.py
+|-- test_promptfoo_policy.py
+|-- test_committed_outputs.py
 `-- test_reference_discovery.py
 
 tests/fixtures/reference_catalog/promptfoo/
@@ -297,11 +328,11 @@ enum keys so conservation cannot silently omit a disposition.
 | Phase | Reviewable result | Exit proof |
 |---|---|---|
 | 1 | Stable record contract | Model/validation unit tests |
-| 2 | Safe provenance and byte boundaries | Digest/lock/rendering unit tests |
+| 2 | Safe provenance and transactional byte boundaries | Digest/lock/rendering unit tests |
 | 3-7 | One independently tested discoverer family per commit | Source fixture tests, then locked-source reconciliation |
 | 8 | Coverage from the same record tuple | Role/license/conversion conservation tests |
 | 9 | One deterministic generate/check surface | Generation/CLI failure and drift tests |
-| 10 | Committed 1464-row ledger and coverage | Full-checkout integration and two clean checks |
+| 10 | Committed 1464-row ledger and coverage | Hermetic artifact validation, full-checkout integration, and two clean checks |
 | 11 | One renamed 18-record validation selection | Structured count and reference search |
 | 12 | Delivery evidence | Full test matrix, clean tree, Draft PR |
 
@@ -310,15 +341,15 @@ enum keys so conservation cannot silently omit a disposition.
 | Phase | Allowed result | Not allowed yet | Exit proof | Stop condition |
 |---|---|---|---|---|
 | 1 | Models, enums, Protocol, invariant tests | Source parsing or output files | Focused Pytest and strict MyPy | Any approved role/output pair is ambiguous |
-| 2 | Digests, lock checks, byte rendering, atomic writer | Discoverer implementation | Failure-path unit tests | A Git/path/write failure cannot fail closed |
+| 2 | Digests, lock checks, byte rendering, transactional writer | Discoverer implementation | Failure-path unit tests | A Git/path/write failure cannot fail closed |
 | 3 | SABER records only | Other source families | A/B/C fixture reconciliation | Manifest/tree IDs or semantics disagree |
 | 4 | CodeIPI and Terminal-Bench records | MCP or Promptfoo | Two hermetic discoverer suites | Raw fixture content is needed in output |
 | 5 | MCP benchmark/taxonomy records | Promptfoo | JSON/CSV shape and taxonomy tests | Category normalization needs an unapproved guess |
-| 6 | Promptfoo entry metadata through AST | Promptfoo execution or adapters | AST golden and classification tests | Any registry node requires evaluation |
+| 6 | Promptfoo Source Graph plus separate typed policy | Promptfoo execution or adapters | Two-mode AST, policy-boundary, and classification tests | Any relevant Registry node requires evaluation |
 | 7 | Harbor/MCP-Universe reference rows | Scenario conversion | Audited-file fixture tests | A reference is mistaken for a scenario |
 | 8 | Coverage and stable YAML | CLI writes | Independent conservation tests | Counts cannot derive from one record tuple |
 | 9 | In-memory build plus generate/check | Committed generated output | Drift/no-write/rollback tests | A source failure can mutate output |
-| 10 | JSONL, Coverage, full reconciliation | Native assets | Exact counts, two checks, safe-content scan | Any locked count/digest differs |
+| 10 | JSONL, Coverage, Hermetic pair validation, full reconciliation | Native assets | Hosted artifact test, exact counts, two checks, safe-content scan | Any committed-pair or locked count/digest differs |
 | 11 | Validation-selection rename and references | Scenario content changes | Structured 18-record subset test | Approved semantics or locators change |
 | 12 | Verification evidence and Draft PR | Unplanned implementation | Full matrix and clean pushed tree | Any gate fails at final HEAD |
 
@@ -489,7 +520,7 @@ git add src/agentsec_eval/reference_catalog tests/unit/reference_catalog
 git commit -m "catalog: define upstream ledger models and invariants"
 ```
 
-### Task 2: Add deterministic digests, lock verification, and atomic rendering
+### Task 2: Add deterministic digests, lock verification, and transactional rendering
 
 **Files:**
 - Modify: `pyproject.toml`
@@ -505,7 +536,7 @@ git commit -m "catalog: define upstream ledger models and invariants"
 **Interfaces:**
 - Consumes: repository root, YAML source locks, verified paths, JSON values, record sequences.
 - Produces: `CatalogLocks`, `VerifiedCheckout`, four digest functions, deterministic JSONL bytes,
-  and transactional output replacement.
+  and transactional two-file replacement with staged writes and Python-level rollback.
 
 - [ ] **Step 1: Add failing digest vectors**
 
@@ -627,7 +658,7 @@ Verification runs only `git remote get-url origin`, `rev-parse HEAD`, `status --
 `GIT_NO_LAZY_FETCH=1 git rev-list --objects --missing=print HEAD`. Normalize only trailing `.git`
 and `/` for remote comparison. Any missing object or output beginning `?` fails closed.
 
-- [ ] **Step 8: Implement deterministic rendering and atomic replacement**
+- [ ] **Step 8: Implement deterministic rendering and transactional two-file replacement**
 
 ```python
 @dataclass(frozen=True)
@@ -643,7 +674,7 @@ def render_jsonl(
 ) -> bytes: ...
 
 
-def atomic_replace_outputs(
+def replace_outputs_transactionally(
     rendered: RenderedCatalog,
     *,
     ledger_path: Path,
@@ -652,8 +683,12 @@ def atomic_replace_outputs(
 ```
 
 Stage temp files beside their targets, flush and `os.fsync`, preserve previous bytes, replace only
-after both stages succeed, and restore the previous pair on a caught replace failure. Always clean
-temp files. Coverage YAML rendering is added in Task 8 after its model exists.
+after both stages succeed, and restore the previous pair on a caught second-replace failure. Always
+clean temp files. Each `os.replace` is individually atomic. A process crash or power loss between
+the two replacements is not automatically rolled back; Task 10's Hosted Hermetic Artifact Test
+detects a committed mismatched pair by recalculating Coverage from JSONL. Do not add a version
+directory, symlink, database, or extra manifest. Coverage YAML rendering is added in Task 8 after
+its model exists.
 
 - [ ] **Step 9: Verify GREEN**
 
@@ -909,6 +944,7 @@ git commit -m "catalog: discover MCP benchmark and taxonomy records"
 
 **Files:**
 - Modify: `pyproject.toml`
+- Create: `src/agentsec_eval/reference_catalog/promptfoo_policy.py`
 - Create: `src/agentsec_eval/reference_catalog/discovery/typescript.py`
 - Create: `src/agentsec_eval/reference_catalog/discovery/promptfoo.py`
 - Create: `tests/fixtures/reference_catalog/promptfoo/plugins.ts`
@@ -917,13 +953,21 @@ git commit -m "catalog: discover MCP benchmark and taxonomy records"
 - Create: `tests/fixtures/reference_catalog/promptfoo/strategies.ts`
 - Create: `tests/fixtures/reference_catalog/promptfoo/strategyIndex.ts`
 - Create: `tests/unit/reference_catalog/test_promptfoo_discovery.py`
+- Create: `tests/unit/reference_catalog/test_promptfoo_policy.py`
 - Modify: `src/agentsec_eval/reference_catalog/discovery/__init__.py`
 
 **Interfaces:**
-- Consumes: five project-authored golden TypeScript fixtures in unit tests and only approved locked
-  Promptfoo source paths in integration.
-- Produces: 291 `attack_generation_entry` rows and 38 `delivery_strategy_entry` rows at the locked
-  commit, without importing Promptfoo.
+- Consumes: five project-authored golden TypeScript fixtures, typed project policy tables, and only
+  approved locked Promptfoo source paths in integration.
+- Produces: a typed `PromptfooSourceGraph`, independently validated concrete policy coverage, 291
+  `attack_generation_entry` rows, and 38 `delivery_strategy_entry` rows without importing
+  Promptfoo.
+
+The module boundary is strict: `discovery/typescript.py` contains only limited AST reading and no
+security/license/applicability policy; `discovery/promptfoo.py` extracts and reconciles the locked
+Source Graph, then joins it to policy without housing large policy tables; `promptfoo_policy.py`
+contains only frozen typed project judgments and evidence paths, with no parser, filesystem read, or
+upstream execution capability.
 
 - [ ] **Step 1: Pin the parser dependencies**
 
@@ -942,13 +986,13 @@ No Node package, Promptfoo package, JavaScript runtime, or subprocess parser is 
 `# type: ignore[import-untyped]` in `discovery/typescript.py`; no other catalog module may suppress
 that import.
 
-- [ ] **Step 2: Write failing AST golden tests**
+- [ ] **Step 2: Write failing two-mode AST golden tests**
 
-The fixtures contain project-authored examples of literal arrays/objects, imported spreads,
-Collection overlap, alias expansion to both Plugins and Strategies, accepted Strategy deduplication,
-and registry-only stubs. Tests assert the extracted symbol graph and fail on comments containing
-fake constants, template strings, function calls, computed values, unresolved imports, parse error
-nodes, or a registry object without a literal `id`.
+The four Constant fixtures contain project-authored literal arrays/objects, approved relative
+imports, imported spreads, Collection overlap, alias expansion to both Plugins and Strategies, and
+accepted Strategy deduplication. Static Constant Module tests assert the extracted symbol graph and
+fail on imports outside the explicit four-module allowlist, comments containing fake constants,
+template strings, function calls, computed values, unresolved identifiers, or parse error nodes.
 
 ```python
 def test_parser_rejects_dynamic_initializer(tmp_path: Path) -> None:
@@ -958,7 +1002,24 @@ def test_parser_rejects_dynamic_initializer(tmp_path: Path) -> None:
         TypeScriptStaticModule.parse(source).exported_value("PLUGINS")
 ```
 
-- [ ] **Step 3: Write failing Promptfoo classification tests**
+`strategyIndex.ts` contains imports from deliberately nonexistent runtime and strategy modules,
+including both `import` and `import type`, followed by a project-authored `Strategies` array with
+opaque action functions. Registry ID mode must return only its literal IDs without trying to open
+any imported path. Add failures for a non-array `Strategies` initializer, non-object element,
+missing/non-string/duplicate `id`, spread element, and syntax error.
+
+```typescript
+import cliState from '../../cliState';
+import { addHydra } from './hydra-does-not-exist';
+import type { Strategy } from './types-does-not-exist';
+
+export const Strategies: Strategy[] = [
+  { id: 'basic', action: async () => [] },
+  { id: 'jailbreak:hydra', action: async () => addHydra(cliState) },
+];
+```
+
+- [ ] **Step 3: Write failing Promptfoo Source Graph and classification tests**
 
 Against the miniature fixtures, assert:
 
@@ -976,13 +1037,29 @@ Against the miniature fixtures, assert:
 - `repo_shell_applicable`, `mcp_applicable`, and `future_domain_only` stay null when neither source
   evidence nor an approved mapping proves a value.
 
-- [ ] **Step 4: Verify RED**
+- [ ] **Step 4: Write failing typed policy-boundary tests**
 
-Run: `.venv/bin/pytest tests/unit/reference_catalog/test_promptfoo_discovery.py -q`
+In `test_promptfoo_policy.py`, assert:
 
-Expected: parser and discoverer imports fail.
+- concrete Plugin policy keys equal the fixed 155-ID locked snapshot with no missing or extra key;
+- concrete Strategy policy keys equal the fixed 33-ID concrete Strategy snapshot with no missing or
+  extra key;
+- Plugin and Strategy policy ID sets are disjoint;
+- Collection, alias, preset, and stub IDs are absent from both concrete policy maps;
+- every `PROMPTFOO_EVIDENCE_PATHS` key is a concrete policy ID and every value is a non-absolute,
+  traversal-free `PurePosixPath`;
+- every policy value is a frozen typed model and every classification dimension is mutually
+  exclusive; and
+- an AST import-boundary scan proves `promptfoo_policy.py` imports no Tree-sitter/discovery module,
+  calls no filesystem read or subprocess API, and cannot read or execute upstream source.
 
-- [ ] **Step 5: Implement the narrow Tree-sitter adapter**
+- [ ] **Step 5: Verify RED**
+
+Run: `.venv/bin/pytest tests/unit/reference_catalog/test_promptfoo_discovery.py tests/unit/reference_catalog/test_promptfoo_policy.py -q`
+
+Expected: parser, discoverer, and policy imports fail.
+
+- [ ] **Step 6: Implement the narrow two-mode Tree-sitter adapter**
 
 ```python
 StaticScalar = str | int | bool | None
@@ -1004,24 +1081,75 @@ class TypeScriptStaticModule:
         cls,
         path: Path,
         *,
+        allowed_imports: Mapping[str, Mapping[str, StaticValue]],
         imported_exports: Mapping[str, StaticValue] | None = None,
     ) -> TypeScriptStaticModule: ...
 
     def exported_value(self, name: str) -> StaticValue: ...
-    def registry_ids(self, export_name: str) -> tuple[str, ...]: ...
+
+
+def extract_registry_ids(
+    path: Path,
+    *,
+    export_name: str = "Strategies",
+) -> tuple[str, ...]: ...
 ```
 
 Initialize the grammar through `Language(tree_sitter_typescript.language_typescript())` and
 `Parser(language)`. The golden test is the compatibility proof for the pinned 0.25.2/0.23.2 pair;
 do not float either dependency independently.
 
-Walk named AST nodes and allowlist node types; do not reconstruct values from source regexes or
-execute calls. `registry_ids` reads only literal `id` properties and deliberately ignores action
-function bodies instead of evaluating the rest of each registry object. Resolve imports only from
-the four approved constants modules. Reject any import outside that allowlist. Golden tests compare
-the entire extracted safe value graph.
+Static Constant Module mode walks named AST nodes and resolves relative imports only when both the
+module path and imported binding appear in `allowed_imports`. It rejects every other import,
+unresolved identifier, dynamic expression, or unknown call. Registry ID mode parses the one source
+file, permits arbitrary static import declarations, and neither resolves bindings nor opens imported
+paths. It locates the exported array and reads only literal `id` properties; action functions,
+calls, templates, and all other property subtrees are opaque. Both modes use AST nodes, never source
+regexes or execution.
 
-- [ ] **Step 6: Implement `PromptfooDiscoverer` with explicit approved surfaces**
+- [ ] **Step 7: Implement the independent typed policy module**
+
+```python
+@dataclass(frozen=True)
+class PromptfooPluginPolicy:
+    native_conversion_disposition: NativeConversionDisposition
+    generation_dependency: GenerationDependency
+    repo_shell_applicable: bool | None
+    mcp_applicable: bool | None
+    future_domain_only: bool | None
+    embedded_data_license_disposition: RawReuseDisposition
+
+
+@dataclass(frozen=True)
+class PromptfooStrategyPolicy:
+    native_conversion_disposition: NativeConversionDisposition
+    runtime_ownership: RuntimeOwnership
+    state_scope: StateScope
+    requires_target_feedback: bool
+    remote_inference_required: bool
+    generation_dependency: GenerationDependency
+    repo_shell_applicable: bool | None
+    mcp_applicable: bool | None
+    future_domain_only: bool | None
+    embedded_data_license_disposition: RawReuseDisposition
+
+
+LOCKED_CONCRETE_PLUGIN_IDS: frozenset[str] = frozenset(...)
+LOCKED_CONCRETE_STRATEGY_IDS: frozenset[str] = frozenset(...)
+CONCRETE_PLUGIN_POLICIES: Mapping[str, PromptfooPluginPolicy] = MappingProxyType(...)
+CONCRETE_STRATEGY_POLICIES: Mapping[str, PromptfooStrategyPolicy] = MappingProxyType(...)
+PROMPTFOO_EVIDENCE_PATHS: Mapping[str, tuple[PurePosixPath, ...]] = MappingProxyType(...)
+```
+
+At module import, compare each policy map to its locked concrete-ID snapshot and compare evidence
+keys to their union. Raise `RuntimeError` for missing/extra keys or invalid paths. The module owns
+conversion, runtime ownership, state scope, target feedback, remote dependency, applicability, and
+embedded-data/license judgments. It contains no source parser or I/O. Explicit selector-rule
+functions classify Collection, alias, preset, and stub Source Graph nodes without placing those IDs
+in either concrete policy map. Separate Plugin and Strategy policy types ensure Strategy-only ledger
+fields remain null on Plugin rows.
+
+- [ ] **Step 8: Implement `PromptfooDiscoverer` with explicit approved surfaces**
 
 ```python
 PROMPTFOO_REGISTRY_PATHS = (
@@ -1041,15 +1169,11 @@ class PromptfooDiscoverer:
 
 Extract `ALL_PLUGINS`, `COLLECTIONS`, Coding Agent sets, `MCP_PLUGINS`, remote/dataset sets,
 `ALIASED_PLUGIN_MAPPINGS`, `ALL_STRATEGIES`, Strategy Collections/mappings, remote/multi-turn sets,
-and registry IDs. Define an exhaustive `PROMPTFOO_EVIDENCE_PATHS` mapping from each concrete
-Plugin/Strategy ID to the approved repository-relative provider, strategy, root/nested license, or
-embedded-data provenance files needed for source-only dependency flags. Paths are explicit, never a
-broad repository glob. Their code/content is never emitted.
-
-Use exhaustive dictionaries keyed by concrete locked IDs for conversion and runtime classifications.
-At module import, assert each accepted/registry ID appears exactly once in the classification table
-and no extra key exists. Collections, aliases, presets, and stubs receive selector/reference
-dispositions even when their expansions contain concrete candidates. `grader_disposition` is always
+and registry IDs into a frozen `PromptfooSourceGraph`. Compare the graph's concrete Plugin/Strategy
+sets with `LOCKED_CONCRETE_PLUGIN_IDS` and `LOCKED_CONCRETE_STRATEGY_IDS` before constructing any
+record. `discovery/promptfoo.py` combines Source Graph nodes with the policy module but contains no
+large evidence/classification tables. Collections, aliases, presets, and stubs use the explicit
+selector rules and remain outside concrete policy. `grader_disposition` is always
 `AUXILIARY_EVIDENCE` when present.
 
 The conversion partition is explicit and unit-tested: 154 concrete Plugins plus 20 concrete
@@ -1062,25 +1186,27 @@ Raw reuse is classified independently. MIT-licensed source declarations with no 
 remote-output dependency are `allowed`; entries with embedded datasets, third-party prompt sources,
 or remote generation/output terms are `review_required`; `prohibited` is used only when source
 evidence establishes that restriction. Every entry records the evidence paths behind that decision,
-and no embedded data is copied.
+and no embedded data is copied. Evidence paths live only in `promptfoo_policy.py`; they are explicit,
+never a broad repository glob, and their source content is never emitted.
 
-- [ ] **Step 7: Verify GREEN, parser isolation, and dependency boundaries**
+- [ ] **Step 9: Verify GREEN, parser isolation, and dependency boundaries**
 
 Run:
 
 ```bash
 .venv/bin/pip install -e ".[dev,catalog]"
-.venv/bin/pytest tests/unit/reference_catalog/test_promptfoo_discovery.py -q
-.venv/bin/mypy src/agentsec_eval/reference_catalog/discovery/typescript.py src/agentsec_eval/reference_catalog/discovery/promptfoo.py tests/unit/reference_catalog/test_promptfoo_discovery.py
+.venv/bin/pytest tests/unit/reference_catalog/test_promptfoo_discovery.py tests/unit/reference_catalog/test_promptfoo_policy.py -q
+.venv/bin/mypy src/agentsec_eval/reference_catalog/promptfoo_policy.py src/agentsec_eval/reference_catalog/discovery/typescript.py src/agentsec_eval/reference_catalog/discovery/promptfoo.py tests/unit/reference_catalog/test_promptfoo_discovery.py tests/unit/reference_catalog/test_promptfoo_policy.py
 ! rg -n "subprocess|node|promptfoo.*(import|require)|from promptfoo|import promptfoo" src/agentsec_eval/reference_catalog/discovery/{typescript,promptfoo}.py
+! rg -n "tree_sitter|subprocess|read_text|read_bytes|open\(" src/agentsec_eval/reference_catalog/promptfoo_policy.py
 ```
 
 Expected: golden tests pass, strict MyPy passes, and the prohibited runtime search has no matches.
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 10: Commit**
 
 ```bash
-git add pyproject.toml src/agentsec_eval/reference_catalog/discovery tests/fixtures/reference_catalog/promptfoo tests/unit/reference_catalog/test_promptfoo_discovery.py
+git add pyproject.toml src/agentsec_eval/reference_catalog/promptfoo_policy.py src/agentsec_eval/reference_catalog/discovery tests/fixtures/reference_catalog/promptfoo tests/unit/reference_catalog/test_promptfoo_discovery.py tests/unit/reference_catalog/test_promptfoo_policy.py
 git commit -m "catalog: discover Promptfoo source entries"
 ```
 
@@ -1231,8 +1357,8 @@ git commit -m "catalog: render and validate coverage ledger"
 
 **Interfaces:**
 - Consumes: repository root, catalog locks, ordered discoverers, and committed output paths.
-- Produces: one in-memory `GeneratedCatalog`, atomic `generate`, read-only `check`, and stable CLI
-  exit codes.
+- Produces: one in-memory `GeneratedCatalog`, transactional `generate`, read-only `check`, and
+  stable CLI exit codes.
 
 - [ ] **Step 1: Write failing orchestration tests**
 
@@ -1296,8 +1422,8 @@ class CatalogDriftError(RuntimeError):
 
 `build_catalog` performs exactly: load locks -> verify every checkout -> invoke discoverers ->
 validate all records -> calculate coverage -> render both outputs in memory. `generate_catalog`
-atomically replaces only after `build_catalog` succeeds. `check_catalog` compares bytes and raises
-`CatalogDriftError` with path plus digest, never output contents.
+calls `replace_outputs_transactionally` only after `build_catalog` succeeds. `check_catalog`
+compares bytes and raises `CatalogDriftError` with path plus digest, never output contents.
 
 - [ ] **Step 6: Add one command with exactly two subcommands**
 
@@ -1314,7 +1440,9 @@ cannot be redirected into a second dataset.
 
 Update the existing `quality` install to `pip install -e ".[dev,catalog]"`, exclude
 `reference_catalog` alongside Docker tests in its ordinary Pytest marker expression, and add a
-focused command for `tests/unit/reference_catalog`. Register:
+focused command for `tests/unit/reference_catalog`. That unmarked unit directory includes Task 10's
+`test_committed_outputs.py`, so Hosted CI validates committed JSONL/Coverage bytes without cloning
+upstream projects. Register:
 
 ```toml
 markers = [
@@ -1323,8 +1451,9 @@ markers = [
 ]
 ```
 
-Hosted CI does not clone upstream projects. Full reconciliation remains an explicit integration
-gate run in the prepared workspace.
+Hosted CI does not clone upstream projects. It validates committed artifacts from repository files;
+source reconciliation and `check_catalog()` full rescans remain explicit integration gates in the
+prepared workspace.
 
 - [ ] **Step 8: Verify GREEN**
 
@@ -1347,6 +1476,7 @@ git commit -m "catalog: add deterministic generate and check commands"
 ### Task 10: Reconcile full checkouts and generate the committed ledger
 
 **Files:**
+- Create: `tests/unit/reference_catalog/test_committed_outputs.py`
 - Create: `tests/integration/reference_catalog/conftest.py`
 - Create: `tests/integration/reference_catalog/test_locked_source_reconciliation.py`
 - Create: `tests/integration/reference_catalog/test_committed_catalog.py`
@@ -1354,11 +1484,45 @@ git commit -m "catalog: add deterministic generate and check commands"
 - Create: `references/upstream-index/ac-upstream-coverage.yaml`
 
 **Interfaces:**
-- Consumes: every complete locked checkout and the production generator.
-- Produces: the reviewed 1464-row safe metadata ledger, derived coverage, and reproducibility
-  evidence against the actual sources.
+- Consumes: committed outputs in a Hosted-CI-safe unit test, plus every complete locked checkout in
+  separately marked integration tests.
+- Produces: the reviewed 1464-row safe metadata ledger, byte-consistent derived coverage, Hermetic
+  committed-pair validation, and source reconciliation evidence.
 
-- [ ] **Step 1: Add explicitly marked full-checkout tests**
+- [ ] **Step 1: Add the unmarked Hermetic committed-output test**
+
+`tests/unit/reference_catalog/test_committed_outputs.py` reads only:
+
+```text
+references/upstream-index/ac-upstream-asset-index.jsonl
+references/upstream-index/ac-upstream-coverage.yaml
+```
+
+It must not import/call `build_catalog` or `check_catalog`, load source locks, access a checkout, or
+carry the `reference_catalog` marker. Parse every non-empty line with
+`UpstreamLedgerRecord.model_validate_json`, then call `validate_records`. Derive `source_order` from
+first occurrence in the validated JSONL tuple, call `calculate_coverage(records, source_order=...)`,
+and compare `render_coverage_yaml(summary)` byte-for-byte with the committed YAML.
+
+The test also asserts exactly 1464 lines, global identity uniqueness, role conservation
+`1017+89+6+291+38+8+15=1464`, native conversion conservation
+`1106+174+10+169+3+2=1464`, null initial native outputs, no Adapter Candidate selector kinds, no
+prohibited raw-content fields, and no host absolute paths. Source repository URLs and
+repository-relative provenance paths remain allowed.
+
+```python
+def test_committed_outputs_are_valid_and_self_consistent(repository_root: Path) -> None:
+    ledger_path = repository_root / "references/upstream-index/ac-upstream-asset-index.jsonl"
+    coverage_path = repository_root / "references/upstream-index/ac-upstream-coverage.yaml"
+    lines = ledger_path.read_text(encoding="utf-8").splitlines()
+    records = validate_records(tuple(UpstreamLedgerRecord.model_validate_json(line) for line in lines))
+    assert len(records) == 1464
+    source_order = tuple(dict.fromkeys(record.source_project for record in records))
+    summary = calculate_coverage(records, source_order=source_order)
+    assert render_coverage_yaml(summary) == coverage_path.read_bytes()
+```
+
+- [ ] **Step 2: Add explicitly marked full-checkout tests**
 
 At module scope:
 
@@ -1366,11 +1530,12 @@ At module scope:
 pytestmark = [pytest.mark.integration, pytest.mark.reference_catalog]
 ```
 
-`conftest.py` derives the repository root from `__file__`, calls `load_catalog_locks`, and verifies
-all checkouts. It contains no `/root/...` literal. Explicit invocation fails, rather than skips, if
-a checkout is missing or wrong; ordinary unit/CI commands exclude the marker.
+Both integration modules carry those markers. `conftest.py` derives the repository root from
+`__file__`, calls `load_catalog_locks`, and verifies all checkouts. It contains no `/root/...`
+literal. Explicit invocation fails, rather than skips, if a checkout is missing or wrong; ordinary
+unit/Hosted-CI commands exclude the marker.
 
-- [ ] **Step 2: Add exact source reconciliation assertions**
+- [ ] **Step 3: Add exact source reconciliation assertions**
 
 `test_locked_source_reconciliation.py` calls each discoverer independently and asserts:
 
@@ -1394,33 +1559,27 @@ Plugins, 10 dataset-backed concrete Plugins, 22 target-independent Strategy IDs,
 target-feedback Strategy IDs, and four cross-Run Strategy IDs. Freshly recompute every record
 digest from its locked source unit.
 
-- [ ] **Step 3: Add committed-output and safety assertions**
+- [ ] **Step 4: Add the full-rescan committed-catalog integration test**
 
-`test_committed_catalog.py` asserts:
+`tests/integration/reference_catalog/test_committed_catalog.py` calls `check_catalog()` and asserts
+the committed pair matches a fresh full-checkout scan. It owns source drift, lock, digest, Promptfoo
+Registry, and SABER reconciliation evidence only. It does not duplicate the Hermetic per-line,
+conservation, forbidden-field, or Coverage byte-recalculation assertions.
 
-- exactly 1464 non-empty JSONL lines and one terminal newline;
-- role conservation `1017+89+6+291+38+8+15=1464`;
-- native conversion conservation `1106+174+10+169+3+2=1464`, with all other dispositions zero;
-- all initial native output fields are null;
-- no Collection, alias, preset, or stub is an Adapter Candidate;
-- taxonomy/selector/reference rows resolve to no runtime output;
-- no host absolute path or scan timestamp is present;
-- no output keys or values contain upstream prompt, payload, fixture, solution, credential,
-  evaluator-label, implementation-code, or service-URL content; and
-- `check_catalog` reproduces the exact committed bytes.
+- [ ] **Step 5: Verify both RED paths before generation**
 
-Source repository URLs and repository-relative source paths are permitted provenance and must not
-be confused with prohibited service URLs.
+Run:
 
-- [ ] **Step 4: Verify integration RED before generation**
+```bash
+.venv/bin/pytest tests/unit/reference_catalog/test_committed_outputs.py -q
+.venv/bin/pytest -m reference_catalog tests/integration/reference_catalog -q
+```
 
-Run: `.venv/bin/pytest -m reference_catalog tests/integration/reference_catalog -q`
+Expected: the Hermetic test and `check_catalog()` integration test fail because the JSONL and
+Coverage files do not exist; source reconciliation tests must already pass. If source reconciliation
+fails, stop and report concrete missing/extra IDs before generating anything.
 
-Expected: committed-output tests fail because the JSONL and coverage files do not exist; source
-reconciliation tests must already pass. If source reconciliation fails, stop and report concrete
-missing/extra IDs before generating anything.
-
-- [ ] **Step 5: Generate once, verify twice, and inspect the diff**
+- [ ] **Step 6: Generate once, verify twice, and run both test layers**
 
 Run:
 
@@ -1428,15 +1587,17 @@ Run:
 .venv/bin/agentsec-reference-catalog generate --repository-root .
 .venv/bin/agentsec-reference-catalog check --repository-root .
 .venv/bin/agentsec-reference-catalog check --repository-root .
+.venv/bin/pytest tests/unit/reference_catalog/test_committed_outputs.py -q
 .venv/bin/pytest -m reference_catalog tests/integration/reference_catalog -q
 wc -l references/upstream-index/ac-upstream-asset-index.jsonl
 git diff --check
 ```
 
-Expected: both checks return 0 without modifying files; integration tests pass; `wc -l` reports
-1464; the diff contains only safe metadata outputs and tests.
+Expected: both checks return 0 without modifying files; the Hosted-CI-safe artifact test and
+full-checkout integration tests pass; `wc -l` reports 1464; the diff contains only safe metadata
+outputs and tests.
 
-- [ ] **Step 6: Run explicit leak and duplicate scans**
+- [ ] **Step 7: Run explicit leak and duplicate scans**
 
 Run:
 
@@ -1446,10 +1607,10 @@ Run:
 .venv/bin/python -c 'import json; from pathlib import Path; rows=[json.loads(line) for line in Path("references/upstream-index/ac-upstream-asset-index.jsonl").read_text(encoding="utf-8").splitlines()]; keys=[(r["source_project"],r["source_path"],r["source_record_key"]) for r in rows]; assert len(rows)==1464==len(set(keys))'
 ```
 
-- [ ] **Step 7: Commit generated metadata separately**
+- [ ] **Step 8: Commit generated metadata and its Hermetic verifier together**
 
 ```bash
-git add tests/integration/reference_catalog references/upstream-index
+git add tests/unit/reference_catalog/test_committed_outputs.py tests/integration/reference_catalog references/upstream-index
 git commit -m "references: generate full A/C upstream ledger"
 ```
 
@@ -1608,6 +1769,10 @@ The implementation expands the suggested source commit into reviewable source-fa
 10. `references: generate full A/C upstream ledger`
 11. `docs: finalize validation selection terminology`
 
+Commit 6 includes `promptfoo_policy.py` and its independent policy tests. Commit 10 includes the two
+generated outputs and unmarked `test_committed_outputs.py`, so policy coverage and committed-pair
+consistency land with the artifacts they protect.
+
 ## Acceptance Gates
 
 1. `check` runs twice with exit 0 and no file or mtime changes.
@@ -1622,8 +1787,10 @@ The implementation expands the suggested source commit into reviewable source-fa
    label, or implementation code is copied.
 9. The generator executes no upstream code.
 10. No second dataset or Scenario Asset copy exists.
-11. Ordinary unit tests use no host absolute path or full checkout.
-12. Full-checkout tests are explicitly marked and independently executable.
+11. Ordinary unit tests use no host absolute path or full checkout, and Hosted CI's unmarked
+    committed-output test recalculates Coverage from JSONL and proves byte equality with YAML.
+12. Full-checkout tests remain explicitly marked and independently executable for locks, source
+    counts, digests, Registry/Manifest reconciliation, and `check_catalog()` rescans.
 13. Ruff, format, strict MyPy, ordinary Pytest, full-checkout catalog tests, PyRIT tests, and the
     available Docker gate pass.
 14. `git diff --check` passes.
@@ -1639,7 +1806,8 @@ Stop before writing outputs or advancing to the next task if:
 - a parser change would require executing TypeScript or broadening beyond approved source nodes;
 - any count or conservation equation fails;
 - a safe digest cannot be computed without storing restricted content;
-- atomic replacement cannot preserve the previous committed pair on a handled failure; or
+- transactional replacement cannot restore the previous committed pair on a handled Python-level
+  failure; or
 - implementation requires changing the approved macro design.
 
 Report the concrete source, path, record key, expected/observed count, or unsupported AST node. Do
@@ -1653,18 +1821,23 @@ not hide an enumeration failure as `malformed` or relax an invariant to continue
   records. The explicit alias table is required to derive six taxonomy-only rows deterministically.
 - The mutable `reference-sources/promptfoo` checkout is not the locked source; the manifest locator
   must point to the clean `promptfoo-locked-fcde2e89` checkout.
-- Two fixed output paths cannot be replaced by one portable filesystem syscall. The plan therefore
-  stages and fsyncs both, performs atomic replacement per file, rolls back a handled second-file
-  failure, and writes nothing until all discovery/validation/rendering succeeds.
-- Hosted CI does not contain all upstream checkouts. Hermetic catalog unit tests run there; the
-  explicitly marked reconciliation gate runs in the prepared full-checkout workspace before PR
-  review.
+- Two fixed output paths cannot form one portable operating-system transaction. The plan uses
+  transactional two-file replacement with staged writes, Python-level rollback, and committed-pair
+  consistency validation. Each `os.replace` is atomic; a crash or power loss between replacements
+  is not automatically rolled back.
+- Hosted CI does not contain upstream checkouts. Its unmarked Hermetic Artifact Test strictly parses
+  committed JSONL, recalculates Coverage, and compares YAML bytes; the explicitly marked integration
+  gate separately verifies locked sources and full rescans in the prepared workspace.
+- Promptfoo's Registry imports runtime/strategy modules that need not exist for metadata extraction.
+  Registry ID mode must ignore those imports and opaque action subtrees, while Static Constant
+  Module mode retains strict four-module import resolution.
 
 ## Final Validation
 
-Completion requires all commands in Task 12 plus structured proof of every acceptance count, two
-clean `check` executions, one safe-content scan, a clean worktree, a pushed branch, and a Draft PR.
-Test success alone does not authorize generation of native Scenario Assets or Promptfoo Adapters.
+Completion requires all commands in Task 12 plus structured proof of every acceptance count, Hosted
+Hermetic committed-pair validation, full-checkout reconciliation, two clean `check` executions, one
+safe-content scan, a clean worktree, a pushed branch, and a Draft PR. Test success alone does not
+authorize generation of native Scenario Assets or Promptfoo Adapters.
 
 ## First Execution Step
 
