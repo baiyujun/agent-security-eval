@@ -18,10 +18,13 @@ engine. The earlier `experiments/inspect-execution-model/` code remains a throwa
 
 ## M0-B: Assertion-backed PyRIT scorer validation
 
-**Status: not started.**
+**Status: bounded implementation validated locally; dedicated PR CI pending.**
 
-Validate that a PyRIT-compatible scorer can consume a project assertion result while the Final
-Assertion Engine remains the source of truth.
+A project-owned Progress Oracle now maps four runtime states into a pinned PyRIT `0.14.0`
+`TrueFalseScorer` while preserving the complete decision as versioned metadata. Only objective
+achievement maps to true; blocked and invalid Runs remain false but terminal and distinguishable.
+The optional integration does not implement an Attack Strategy, policy stopping, PromptTarget, or
+Final Assertion Engine. See [the M0-B validation report](m0-b-pyrit-scorer-validation.md).
 
 ## M0-C: PyRIT Attack Policy embedding validation
 

@@ -4,19 +4,21 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from itertools import pairwise
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, JsonValue, PositiveInt
+from pydantic import BaseModel, ConfigDict, JsonValue, PositiveInt, StringConstraints
+
+_NonEmptyId = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
 
 class FrozenModel(BaseModel):
     """Base configuration for durable immutable project contracts."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
 
 class TargetConfiguration(FrozenModel):
-    target_id: str
+    target_id: _NonEmptyId
     adapter: str
     version: str
 
@@ -29,13 +31,13 @@ class ExecutionScenarioSpec(FrozenModel):
     function will later transform a ``ScenarioCase`` into an ``ExecutionRunSpec``.
     """
 
-    scenario_id: str
+    scenario_id: _NonEmptyId
     user_task: str
     canary: str
 
 
 class AttackCandidate(FrozenModel):
-    candidate_id: str
+    candidate_id: _NonEmptyId
     content: str
 
 
@@ -45,7 +47,7 @@ class ExecutionBudget(FrozenModel):
 
 
 class ExecutionRunSpec(FrozenModel):
-    run_id: str
+    run_id: _NonEmptyId
     target: TargetConfiguration
     scenario: ExecutionScenarioSpec
     attack_candidate: AttackCandidate
