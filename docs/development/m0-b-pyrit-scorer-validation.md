@@ -2,9 +2,10 @@
 
 ## Verdict
 
-**PASS for the bounded local M0-B scorer-boundary validation.** The project-owned Progress Oracle
-contract maps into the pinned PyRIT `0.14.0` true/false scorer interface without losing Run identity,
-terminal state, invalid-Run state, rationale, evidence IDs, or project metadata.
+**PASS for the bounded M0-B scorer-boundary validation.** On 2026-07-17, the local gates and Draft
+PR #7 GitHub Actions passed. The project-owned Progress Oracle contract maps into the pinned PyRIT
+`0.14.0` true/false scorer interface without losing Run identity, terminal state, invalid-Run state,
+rationale, evidence IDs, or project metadata.
 
 This verdict does not mean an Attack Strategy, Attack Policy stopping loop, PromptTarget, Campaign
 Controller, Final Assertion Engine, scenario asset model, M0-C, or M1 is complete.
@@ -137,6 +138,12 @@ Observed local results on 2026-07-17 before delivery:
 - explicit PyRIT integration MyPy: `Success: no issues found in 4 source files`;
 - focused M0-B Pytest: `11 passed`; and
 - unchanged M0-A Docker Pytest: `2 passed in 58.73s`.
+
+Draft PR #7 GitHub Actions results:
+
+- `quality`: passed in 55 seconds;
+- `m0a-docker`: passed in 1 minute 33 seconds; and
+- `m0b-pyrit`: passed in 1 minute 50 seconds.
 
 ## Known Limitations
 
