@@ -173,15 +173,15 @@ public blocked/error scoring path.
   - PyRIT types remain confined to `agentsec_eval.integrations.pyrit`.
   - Internal rationale must never populate `Score.score_rationale`.
 - **Todos**:
-  - [ ] RED-test public blocked, partial-blocked, other-error, and invalid decision paths.
+  - [x] RED-test public blocked, partial-blocked, other-error, and invalid decision paths.
     - **Surface**: M0-B integration tests.
     - **Proof**: current PyRIT fallback returns metadata-free false scores and skips Oracle calls.
     - **Depends on**: none.
-  - [ ] Add `AttackStage`, progress features, internal rationale, and policy feedback.
+  - [x] Add `AttackStage`, progress features, internal rationale, and policy feedback.
     - **Surface**: assertion contract and unit tests.
     - **Proof**: complete decision JSON round-trips the typed fields.
     - **Depends on**: contract RED.
-  - [ ] Route message-level scoring through the Oracle and expose only policy feedback.
+  - [x] Route message-level scoring through the Oracle and expose only policy feedback.
     - **Surface**: PyRIT adapter and compatibility tests.
     - **Proof**: all public-path scores retain complete project metadata; secret rationale is absent
       from `score_rationale`.

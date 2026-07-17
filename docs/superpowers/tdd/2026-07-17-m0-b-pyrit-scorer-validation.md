@@ -202,6 +202,9 @@ adapter implementation. They are compatibility evidence, not a separate claimed 
 The corrected local delivery run also recorded `39 passed, 2 deselected` for the core non-Docker
 suite and `2 passed in 59.33s` for the unchanged M0-A Docker suite.
 
+Draft PR #7 then passed fresh `quality`, `m0a-docker`, and `m0b-pyrit` jobs on the
+review-corrected Head.
+
 ## Refactor Decision
 
 No Attack Strategy, PromptTarget, loop control, scenario asset, Benchmark Adapter, dataset, or Final

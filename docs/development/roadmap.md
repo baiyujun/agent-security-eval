@@ -18,7 +18,7 @@ engine. The earlier `experiments/inspect-execution-model/` code remains a throwa
 
 ## M0-B: Assertion-backed PyRIT scorer validation
 
-**Status: review corrections validated locally; Draft PR #7 final-Head CI pending.**
+**Status: review corrections validated locally and on Draft PR #7 CI on 2026-07-17.**
 
 A project-owned Progress Oracle now maps four runtime states into a pinned PyRIT `0.14.0`
 `TrueFalseScorer` while preserving the complete decision as versioned metadata. Only objective

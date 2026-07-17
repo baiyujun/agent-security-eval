@@ -346,7 +346,7 @@ Assert `Score.score_rationale == decision.policy_feedback` and that an internal 
 rationale is absent from that attacker-visible string while remaining recoverable from the full
 decision JSON.
 
-- [ ] **Step 6: Run all delivery gates and update Draft PR #7**
+- [x] **Step 6: Run all delivery gates and update Draft PR #7**
 
 Run the exact core, M0-B, MyPy, Ruff, Docker, and diff commands from Task 5, then require `quality`,
 `m0a-docker`, and `m0b-pyrit` to pass on the new PR Head.
