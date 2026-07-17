@@ -45,12 +45,12 @@ assertions, outcomes, findings, corpus entries, and storage before integrating a
 | Implementation cost | Highest; many contracts would be speculative. |
 | Reuse | Lower initially because every third-party type is converted immediately. |
 | Third-party coupling | Lowest. |
-| Upgrade risk | Localized to adapters. |
+| Upgrade risk | Localized to integration boundaries. |
 | Testability | High after the model stabilizes, but early tests validate assumptions rather than workflows. |
 | Reproducibility | Potentially strongest if schemas and migrations are correct. |
 | Unique control/truth | Explicit and easy to enforce. |
 | Internship fit | Poor; it delays an executable slice and risks a large unused model. |
-| License | Clean separation, with attribution isolated to adapters/importers. |
+| License | Clean separation, with attribution isolated to integrations and importers. |
 
 `INFERENCE`: this option has attractive long-term properties but violates the current evidence-first
 phase. It is rejected for initial implementation, not rejected forever.
@@ -82,12 +82,12 @@ Campaign ownership
 | Implementation cost | Moderate and incremental. |
 | Reuse | High where upstream APIs fit; conversion is limited to durable/cross-boundary facts. |
 | Third-party coupling | Contained inside explicit runtime/import boundaries. |
-| Upgrade risk | Moderate; raw artifacts preserve forensic detail while contract tests catch adapters. |
+| Upgrade risk | Moderate; raw artifacts preserve forensic detail while contract tests catch integration drift. |
 | Testability | High for one vertical slice without inventing the full future system. |
 | Reproducibility | Strong if versions, target config, fixture, random seed, raw logs, and assertion inputs are retained. |
 | Unique control/truth | Explicit: integrations return observations or progress, never a formal final verdict. |
 | Internship fit | Best balance of executable progress and reversibility. |
-| License | Clear dependency/adapter/importer ledgers; no source copying required. |
+| License | Clear dependency, integration, and importer ledgers; no source copying required. |
 
 ## Recommendation
 
@@ -115,9 +115,11 @@ only when at least one of these conditions holds:
 - it protects the unique Campaign-control or final-truth boundary; or
 - an upstream API/version/license is too unstable to become a durable contract.
 
-Inspect `Sample` can therefore remain the execution carrier. AgentDojo Task objects can remain
-inside a later suite adapter. PyRIT AttackContext remains inside its policy adapter. ClawSentry
-CanonicalEvent and promptfoo test cases remain import formats, not project standards.
+Inspect `Sample` can therefore remain the execution carrier. AgentDojo Task objects may appear only
+inside an Offline Benchmark Importer or isolated Upstream Replay Harness. PyRIT AttackContext remains
+inside its per-Run policy integration. ClawSentry event and trajectory semantics are design
+references only; its Gateway models and concrete adapters are not project import formats or
+standards. Promptfoo test cases remain candidate-generation import formats, not project standards.
 
 ## Boundary Decisions Proposed Now
 
@@ -140,7 +142,7 @@ These are responsibility boundaries, not a requested directory tree:
 - database technology and normalized tables;
 - whether the durable trace is one event schema or multiple evidence views;
 - the complete outcome enum and metric catalog;
-- target protocol choice beyond the first Coding/CLI adapter;
+- target protocol choice beyond the first Coding/CLI Target Adapter;
 - promptfoo Node sidecar versus long-lived process (CLI first);
 - PyRIT worker/process isolation design;
 - external dataset normalization schema; and

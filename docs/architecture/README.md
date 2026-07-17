@@ -46,3 +46,14 @@ The source audit and architecture comparison are documented in
 [Reference-Informed Architecture Options](reference-informed-options.md). Those documents recommend
 a direction for the next experiment; they do not claim that Inspect AI, promptfoo, PyRIT,
 observation capture, assertions, or storage integrations are implemented.
+
+## Scenario Asset Decisions
+
+- [ADR-0002: Offline Import / Native Runtime](../adr/0002-offline-import-native-runtime.md)
+  is the proposed external Benchmark reuse boundary.
+- [Scenario and Data Assets v1.1](scenario-data-assets-v1.1.md) is the canonical scenario-assets
+  plan aligned with that ADR.
+- [Reference Reuse Audit](reference-reuse-audit.md) maps fixed source evidence to the selected
+  reuse boundary without duplicating the source-lock manifests.
+- [Importer Spike Plan](../development/importer-spike-plan.md) defines the two initial offline
+  conversion proofs and their optional upstream replay comparison.

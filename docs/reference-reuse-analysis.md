@@ -163,13 +163,13 @@ worker. Unique conversation IDs and labels provide logical separation only.
 
 `RECOMMENDATION`:
 
-- Use PyRIT only through an adapter that supplies a project-owned `PromptTarget` and objective
+- Use PyRIT only through an integration boundary that supplies a project-owned `PromptTarget` and objective
   scorer. Every target call must route through the same project Target/Observation boundary.
 - Treat the adapted objective score as progress/stop feedback, never the final verdict.
 - Do not call PyRIT `AttackExecutor` from the campaign path; the Campaign Controller and Inspect own
   cross-run scheduling.
 - If selected after exact-release revalidation, reuse deterministic Converters through the installed
-  PyRIT package inside the policy adapter; do not copy them.
+  PyRIT package inside the policy integration; do not copy them.
 - Before enabling concurrent runs, test a worker-per-run design or prove that one shared memory with
   conversation/label filtering meets the isolation requirement.
 
@@ -208,7 +208,7 @@ API and duplicate control ownership.
 
 `RECOMMENDATION`:
 
-- Prefer a CLI adapter that executes only `redteam generate` after revalidating an exact npm release,
+- Prefer a CLI integration that executes only `redteam generate` after revalidating an exact npm release,
   parses generated YAML with a schema, discards promptfoo assertions as non-authoritative, and
   records plugin/strategy provenance.
 - Use an explicit allowlist of plugins and strategies whose output is a standalone candidate. Reject
@@ -254,14 +254,17 @@ that do not belong in an offline evaluation contract.
 
 `RECOMMENDATION`:
 
-- Use ClawSentry as a design and protocol reference. If it already observes a target, consume it as
-  an external event source through a conversion adapter rather than importing its model as core.
+- Use ClawSentry only as a design reference for cross-framework capability descriptions, unified
+  events, and trajectory patterns. Project-owned Target Adapters may re-express those semantics but
+  must not import or depend on ClawSentry's Gateway, online decision chain, domain models, or concrete
+  framework adapters.
 - Re-express validated trajectory rules as project assertions with explicit evidence requirements;
   do not carry risk weights or online `allow/block/modify/defer` outcomes into final truth.
 - Do not import the complete Gateway or source-copy Codex/Gemini adapters in the first version; their
   dependency closure and enforcement semantics are larger than the needed observation mapping.
 
-`UNKNOWN`: whether a later ClawSentry release exposes a stable, gateway-independent event package.
+No ClawSentry package adoption is open for M1. Any future reconsideration requires a new fixed-source
+audit and architecture decision.
 
 ### AgentDojo
 
@@ -289,11 +292,11 @@ that do not belong in an offline evaluation contract.
 `INFERENCE`: AgentDojo is valuable as an executable business-environment plugin, but its TaskSuite
 runtime is not the project's general scenario model or Campaign Controller.
 
-`RECOMMENDATION`: use a pinned optional dependency inside an isolated importer/adapter. Export a
-neutral snapshot of suite/task/vector IDs, tools, environment version, and oracle results; correct
-the attack-success polarity. Treat Python suites and `!include` as trusted executable plugins, not
-untrusted data. Workspace or travel can be a later vertical slice; Coding/CLI remains the first
-project milestone.
+`RECOMMENDATION`: use an Offline Benchmark Importer for rights-approved static assets. If executable
+comparison is required, provision the pinned dependency only inside an isolated Upstream Replay
+Harness. Export no runtime objects; correct the attack-success polarity in project-owned Oracle
+candidates. Treat Python suites and `!include` as trusted executable plugins, not untrusted data.
+Workspace or travel can be a later vertical slice; Coding/CLI remains the first project milestone.
 
 `UNKNOWN`: per-item data provenance and whether the root MIT license covers every bundled fixture.
 
@@ -374,8 +377,9 @@ Chroma memory binaries, simulated oracle, LLM refusal judge, and damaged data.
 utility, not the code, data, or lifecycle.
 
 `RECOMMENDATION`: use WASP core only as `DESIGN_REFERENCE`. Do not copy or transform its code/data
-for company or commercial use without legal approval or separate permission. A future optional
-adapter may target the independently MIT VisualWebArena environment, after asset provenance review.
+for company or commercial use without legal approval or separate permission. Independently MIT
+VisualWebArena material still requires a separate file and asset audit; any source runtime remains
+limited to isolated upstream replay.
 
 `UNKNOWN`: whether internal company research qualifies as non-commercial; treat it as incompatible
 until legal counsel or the rights holder says otherwise.
@@ -407,13 +411,13 @@ bridges, multiple Samples, cancellation, retries, and concurrent artifact isolat
 | PyRIT | same | Deterministic converters | `pyrit/converter` | `ADAPTER_REUSE` | MIT | Medium dependency closure/API target unresolved | Defer; if adopted, use only through the pinned package inside the policy boundary. |
 | PyRIT | same | Cross-objective executor | `AttackExecutor` | `REJECT` | MIT | Duplicates campaign scheduling | Do not call from the campaign path. |
 | promptfoo | audit SHA; release pin deferred | Standalone candidate generation | `redteam generate`, `doGenerateRedteam`, `synthesize` | `ADAPTER_REUSE` | MIT | Medium: Node, YAML, remote/email/probe behavior | Revalidate a release and use an explicit plugin/strategy allowlist. |
-| promptfoo | same | Target-calling adaptive providers and evaluator | Crescendo/GOAT providers and `redteam run/eval` | `REJECT` | MIT | Duplicates Target execution and truth/control paths | Reject from the candidate adapter. |
-| ClawSentry | audit SHA | Framework event-normalization semantics | `CanonicalEvent`, Codex/Gemini adapters | `DESIGN_REFERENCE` | MIT | High gateway/model coupling | Do not import in core. Convert events only if a target already emits them. |
+| promptfoo | same | Target-calling adaptive providers and evaluator | Crescendo/GOAT providers and `redteam run/eval` | `REJECT` | MIT | Duplicates Target execution and truth/control paths | Reject from the candidate-generation integration. |
+| ClawSentry | audit SHA | Framework event-normalization semantics | event and trajectory vocabulary | `DESIGN_REFERENCE` | MIT | High gateway/model coupling | Re-express validated concepts only; do not consume ClawSentry event streams. |
 | ClawSentry | audit SHA | Deterministic post/trajectory patterns | analyzer files above | `DESIGN_REFERENCE` | MIT | Medium assumptions/false positives | Re-express only validated rules as project assertions. |
 | ClawSentry | audit SHA | Gateway, online policy models, concrete adapters | gateway/model/adapter files above | `REJECT` | MIT | High online-lifecycle coupling | Do not import or source-copy in the first version. |
-| AgentDojo | audit SHA | Stateful suites, utility/security oracles | `TaskSuite`, base tasks, runtime | `ADAPTER_REUSE` | MIT plus embedded notices | High executable plugin/runtime | Later optional isolated suite adapter, not first Coding/CLI slice. |
+| AgentDojo | audit SHA | Stateful suites, utility/security oracles | `TaskSuite`, base tasks, runtime | `DESIGN_REFERENCE` / `DATA_REUSE` candidate | MIT plus embedded notices | High executable plugin/runtime | Offline import after per-asset review; upstream runtime is replay-only. |
 | AgentDojo | audit SHA | Fixtures/tasks/vectors | `default_suites/v1` and `data/suites` | `DATA_REUSE` | provenance unresolved | Medium | Hold until per-item provenance and polarity conversion review. |
-| AgentDojo | audit SHA | General pipeline/runtime ownership | `run_task_with_pipeline` | `REJECT` | MIT plus embedded notices | Competing execution lifecycle | Keep it inside a later suite adapter, never project-wide. |
+| AgentDojo | audit SHA | General pipeline/runtime ownership | `run_task_with_pipeline` | `REJECT` | MIT plus embedded notices | Competing execution lifecycle | Do not use it as a production Campaign Backend. |
 | InjecAgent | audit SHA | Injection seeds and descriptive tool schema | `data/*` | `DATA_REUSE` | root MIT; data provenance unresolved | Low runtime, medium data | Preserve raw records; normalize only approved fields; discard labels as truth. |
 | InjecAgent | audit SHA | DH and S1/S2 progress semantics | case taxonomy and `get_score` | `DESIGN_REFERENCE` | MIT | Low | Do not promote tool-selection rates to final truth. |
 | InjecAgent | audit SHA | Script runner, parser, GPT cache fill, labels | `src/evaluate_*`, `output_parsing.py`, `utils.py` | `REJECT` | MIT | High truth/runtime weakness | Do not execute or import as an evaluator. |
@@ -433,14 +437,14 @@ and dependency-closure work without improving the currently needed boundary vali
 | Project capability | Preferred source | Alternative | Project-owned part | Validation still required |
 | --- | --- | --- | --- | --- |
 | Batch/sample execution | Inspect AI | none selected | Campaign scheduling and run identity | Docker, cancellation, retries, artifact correlation |
-| Sandbox | Inspect Docker/Compose | later external environment adapter | Trust boundary and probe policy | Host/Agent isolation and cleanup |
-| Target connection | Inspect Agent/Solver bridge | ClawSentry event source where deployed | Target capability contract and observation normalization | Black/gray-box capability matrix |
+| Sandbox | Inspect Docker/Compose | later project-owned Sandbox backend | Trust boundary and probe policy | Host/Agent isolation and cleanup |
+| Target connection | project-owned Target Adapter over the Inspect Agent/Solver bridge | ClawSentry semantics only | Target capability contract and observation normalization | Black/gray-box capability matrix |
 | Multi-turn attack | PyRIT adapted per run | project-native deterministic policy | budgets, control ownership, final verdict | CentralMemory concurrency isolation |
 | Deterministic mutation | project-owned | PyRIT converters | seed lineage and reproducibility | required mutation set and invariants |
 | Scenarios | first project-native Coding/CLI slice | AgentDojo later | scenario semantics, fixtures, reset | smallest vertical scenario contract |
 | Attack seeds | promptfoo CLI, approved InjecAgent/ASB rows | PyRIT converters | provenance, approval, lineage | local generation and data rights |
 | Trace normalization | project-owned | ClawSentry semantics | evidence source/strength and durable schema | actual target event formats |
-| Environment oracle | project-owned Coding/CLI probe | AgentDojo/VisualWebArena adapters | trusted final state collection | tamper resistance and negative evidence |
+| Environment oracle | project-owned Coding/CLI probe | offline-imported scenario semantics | trusted final state collection | tamper resistance and negative evidence |
 | Task utility | project-owned scenario oracle | AgentDojo | separate utility result | same-fixture comparison |
 | Final assertion | project-owned only | none | sole security truth | first deterministic assertions |
 | Result storage | project-owned | raw Inspect logs as evidence attachment | durable separated result/artifact schema | minimal persisted fields and versioning |
@@ -452,7 +456,8 @@ and dependency-closure work without improving the currently needed boundary vali
 - Directly depend on: Inspect AI's released public execution APIs only after the remaining execution
   contract tests pass at an exact pinned release.
 - Adapt: Inspect execution/log lifecycle, PyRIT per-run attack policy and any selected converters,
-  promptfoo generation CLI, and later isolated AgentDojo suites or existing ClawSentry event streams.
+  promptfoo generation CLI, offline-imported AgentDojo fixture semantics, and validated ClawSentry
+  event/trajectory concepts re-expressed in project vocabulary.
 - Build: Campaign control, target capability/evidence contract, deterministic mutation needed by
   the first slice, normalized durable evidence, environment/task oracles, final assertion, separated
   result semantics, provenance, corpus feedback, and artifact/regression storage.
@@ -468,7 +473,7 @@ and dependency-closure work without improving the currently needed boundary vali
 | PyRIT | root `LICENSE` | optional installed policy and `pyrit/converter/**` APIs | none copied | permitted by MIT | Retain upstream copyright/license text where required; release/API target is unresolved. |
 | promptfoo | root `LICENSE` | future pinned CLI plus generated YAML candidate import; no source path selected | no source copied | permitted by MIT | Retain package copyright/license text; record generated-output provenance and any service terms separately. |
 | ClawSentry | root `LICENSE` | event/pattern semantics only; no files selected | none | permitted, but no material adopted | Cite repository and SHA in derived design/assertion records. |
-| AgentDojo | root `LICENSE`; embedded notices in `src/agentdojo/yaml_loader.py` | optional suite adapter and possible `src/agentdojo/data/suites/**` assets | none in this PR | conditional on asset review | Preserve root MIT and applicable embedded MIT/CC-BY-SA attribution; approve fixture provenance before import. |
+| AgentDojo | root `LICENSE`; embedded notices in `src/agentdojo/yaml_loader.py` | possible offline-imported `src/agentdojo/data/suites/**` assets; no runtime | none in this PR | conditional on asset review | Preserve root MIT and applicable embedded MIT/CC-BY-SA attribution; approve fixture provenance before import. |
 | InjecAgent | root `LICENCE` | possible `data/user_cases.jsonl`, `attacker_cases_dh.jsonl`, `attacker_cases_ds.jsonl`, and `tools.json` import | none in this PR | conditional on data provenance | Preserve repository/SHA and MIT notice; review model-generated and third-party content. |
 | ASB | root `LICENSE` | possible validated rows from `data/all_attack_tools.jsonl`, `agent_task.jsonl`, and `all_normal_tools.jsonl` | none in this PR | conditional on data provenance | Preserve repository/SHA and MIT notice; reject `agent_task_pot_all.jsonl` and other corrupt/unprovenanced rows. |
 | WASP | root `LICENSE`; separate `LICENSE` files under `visualwebarena` and both Claude demo directories | design semantics only; no files selected | none | core is not approved for commercial use | Do not copy code/data; any independent MIT subtree use needs a separate file and asset audit. |

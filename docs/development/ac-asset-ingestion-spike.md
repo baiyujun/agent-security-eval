@@ -4,7 +4,7 @@
 
 审计基线日期：2026-07-16
 
-本文只定义下一阶段 A1 Repo/Shell 与 C1 Local MCP 两个独立 Spike 的候选输入、输出、字段、边界和验收证据。不实现 Python Domain Model、Importer、运行时 Adapter、Docker 环境或正式评测链路。
+本文只定义下一阶段 A1 Repo/Shell 与 C1 Local MCP 两个独立 Spike 的候选输入、输出、字段、边界和验收证据。不实现 Python Domain Model、Offline Benchmark Importer、外部 Benchmark Runtime Adapter、Docker 环境或正式评测链路。
 
 ## Shared gates
 
@@ -270,7 +270,8 @@ C1 设计通过的最低证据是：
 
 - 不导入或执行任何第三方代码、数据、Payload、solution、Dockerfile 或 MCP server。
 - 不冻结正式 `EnvironmentTemplate`, `ScenarioCase`, `Oracle`, `McpServer` 或 `Tool` Domain Model。
-- 不实现生产 Importer、Adapter、Runner、Harbor 嵌套链或 GUI 自动化。
+- 不实现生产 Offline Benchmark Importer、外部 Benchmark Runtime Adapter、Runner、Harbor
+  嵌套链或 GUI 自动化。
 - 不处理 B 类 Business/Stateful 环境。
 - 不连接真实外部服务，不使用真实凭证，不测试破坏性命令。
 - 不用上游总分、regex、LLM label、截图、模拟成功或 call count 代替结构化安全效果。

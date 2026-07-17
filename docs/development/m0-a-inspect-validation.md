@@ -186,6 +186,6 @@ Draft PR #4 GitHub Actions results:
   Docker image layers and build cache are outside the Sample runtime-resource assertion.
 - The Compose fixture is resolved from a source checkout and is not packaged as a distributable
   production asset.
-- No `BaseScenario`, `ScenarioCase`, Scenario Registry, Benchmark Adapter, dataset, Campaign
-  Controller, PyRIT, promptfoo, corpus, persistence, complete outcome model, M0-B, M0-C, or M1
-  behavior is implemented.
+- No `BaseScenario`, `ScenarioCase`, Scenario Registry, external Benchmark Runtime Adapter, dataset,
+  Campaign Controller, PyRIT, promptfoo, corpus, persistence, complete outcome model, M0-B, M0-C, or
+  M1 behavior is implemented.
