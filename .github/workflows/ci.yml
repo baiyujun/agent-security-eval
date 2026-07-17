@@ -29,7 +29,10 @@ jobs:
         run: mypy
 
       - name: Pytest (non-Docker)
-        run: pytest -m "not docker"
+        run: >-
+          pytest -m "not docker"
+          --ignore=tests/unit/integrations/pyrit
+          --ignore=tests/integration/m0b
 
   m0a-docker:
     runs-on: ubuntu-latest
@@ -53,3 +56,37 @@ jobs:
 
       - name: M0-A Docker integration
         run: pytest -m docker tests/integration/m0a
+
+  m0b-pyrit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,pyrit]"
+
+      - name: Verify PyRIT version
+        run: |
+          python -c 'from importlib.metadata import version; assert version("pyrit") == "0.14.0"'
+
+      - name: MyPy (PyRIT integration)
+        run: |
+          mypy \
+            src/agentsec_eval/integrations/pyrit/__init__.py \
+            src/agentsec_eval/integrations/pyrit/scorer.py \
+            tests/unit/integrations/pyrit/test_scorer.py \
+            tests/integration/m0b/test_pyrit_scorer.py
+
+      - name: Pytest (M0-B)
+        run: |
+          pytest \
+            tests/unit/integrations/pyrit \
+            tests/integration/m0b \
+            tests/unit/integrations/test_pyrit_import_boundary.py

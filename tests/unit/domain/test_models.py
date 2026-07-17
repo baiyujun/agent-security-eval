@@ -51,6 +51,39 @@ def test_execution_run_spec_is_frozen() -> None:
         run_spec.run_id = "changed"
 
 
+def test_execution_run_spec_rejects_unknown_fields() -> None:
+    values = make_run_spec().model_dump()
+    values["unknown"] = True
+
+    with pytest.raises(ValidationError, match="extra_forbidden"):
+        ExecutionRunSpec.model_validate(values)
+
+
+def run_spec_values_with_blank_id(path: tuple[str, ...]) -> dict[str, object]:
+    values: dict[str, object] = make_run_spec().model_dump()
+    current = values
+    for part in path[:-1]:
+        child = current[part]
+        assert isinstance(child, dict)
+        current = child
+    current[path[-1]] = " "
+    return values
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        ("run_id",),
+        ("target", "target_id"),
+        ("scenario", "scenario_id"),
+        ("attack_candidate", "candidate_id"),
+    ],
+)
+def test_execution_run_spec_rejects_blank_durable_ids(path: tuple[str, ...]) -> None:
+    with pytest.raises(ValidationError, match="at least 1 character"):
+        ExecutionRunSpec.model_validate(run_spec_values_with_blank_id(path))
+
+
 @pytest.mark.parametrize(
     ("field", "value"),
     [("max_turns", 0), ("timeout_seconds", 0)],
