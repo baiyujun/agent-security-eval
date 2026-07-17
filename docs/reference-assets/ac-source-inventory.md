@@ -4,6 +4,8 @@
 
 本报告只盘点 A 类 Repo/Shell 与 C 类 Local MCP 参考资产。没有复制第三方代码、数据、攻击 Payload、凭证或服务配置；没有实现 Importer、运行时 Adapter、Docker 环境或正式 Domain Model；没有处理 AgentDojo、τ-bench、AppWorld 或其他 B 类 Business/Stateful 环境。
 
+所有 checkout、commit、许可、审计文件、复制状态、限制条件和 dirty 状态的机器可读单一来源是 `references/source-locks/ac-reference-sources.yaml`；本报告只解释审计判断，不作为第二份 lock。
+
 ## SABER
 
 ### Locked source
@@ -186,64 +188,85 @@ The repository code is MIT, but neither `samples.json` nor the CodeIPI documenta
 
 `CodeIPIImporter` may normalize sample identity, legitimate-task intent, injection-vector metadata, fixture path manifests, verification intent, persistence targets, and provenance. It should emit references to semantically reconstructed fixture seeds, not raw source contents. It must not run source verification commands, materialize source payloads, plant static canaries, or reproduce the upstream scorer during import.
 
-## Terminal-Bench 2 task snapshots in Terminal-Bench
+## Terminal-Bench 2
 
 ### Locked source
 
-- Repository: https://github.com/harbor-framework/terminal-bench
-- Commit: `d28711d0da2675d0bb1d56de45ae5df6082438a3`
-- Commit date: `2026-07-10T22:19:08-07:00`
-- License: Apache-2.0 at repository root
-- Data license: `REVIEW_REQUIRED` per task and fixture
+- Source lock: `references/source-locks/ac-reference-sources.yaml#sources.terminal-bench-2`
+- Official repository: https://github.com/harbor-framework/terminal-bench-2
+- Fixed commit: `69671fbaac6d67a7ef0dfec016cc38a64ef7a77c`
+- Commit date: `2025-10-31T06:35:10+00:00`
+- Clone verification: full clone; `is-shallow-repository=false`; no promisor or partial-clone filter; `git fsck --full --strict` passed
+- License at fixed commit: `NOT_PRESENT_AT_FIXED_COMMIT`
+- Data license: `REVIEW_REQUIRED`
 - Dirty checkout: false
 
-The audited checkout is not the authoritative Terminal-Bench 2 repository. Harbor's `registry.json` maps `terminal-bench@2.0` to `https://github.com/laude-institute/terminal-bench-2.git` at `69671fbaac6d67a7ef0dfec016cc38a64ef7a77c`. The local `original-tasks/` tree contains matching task names, but this audit did not have a local checkout of that official commit and cannot assert byte-for-byte equivalence.
+The official repository and fixed commit are now locked directly. `harbor-framework/terminal-bench/original-tasks` is a legacy snapshot and is no longer treated as Terminal-Bench 2 provenance. The fixed commit predates the repository's later Apache-2.0 `LICENSE` addition, so that later file is not retroactive evidence for this snapshot.
 
 ### Files inspected
 
-- Repository documentation and metadata: `README.md`, `LICENSE`, `pyproject.toml`, `registry.json`
-- Candidate `regex-log`: `original-tasks/regex-log/task.yaml`, `original-tasks/regex-log/Dockerfile`, `original-tasks/regex-log/docker-compose.yaml`, `original-tasks/regex-log/run-tests.sh`, `original-tasks/regex-log/tests/test_outputs.py`, `original-tasks/regex-log/solution.sh`
-- Candidate `log-summary-date-ranges`: `original-tasks/log-summary-date-ranges/task.yaml`, `original-tasks/log-summary-date-ranges/Dockerfile`, `original-tasks/log-summary-date-ranges/docker-compose.yaml`, `original-tasks/log-summary-date-ranges/log_generator_deterministic.py`, `original-tasks/log-summary-date-ranges/run-tests.sh`, `original-tasks/log-summary-date-ranges/tests/test_outputs.py`, `original-tasks/log-summary-date-ranges/solution.sh`
-- Candidate `nginx-request-logging`: `original-tasks/nginx-request-logging/task.yaml`, `original-tasks/nginx-request-logging/Dockerfile`, `original-tasks/nginx-request-logging/docker-compose.yaml`, `original-tasks/nginx-request-logging/run-tests.sh`, `original-tasks/nginx-request-logging/tests/test_outputs.py`, `original-tasks/nginx-request-logging/solution.sh`
-- Historical harness and parser paths: `terminal_bench/handlers/trial_handler.py`, `terminal_bench/harness/harness.py`, `terminal_bench/terminal/docker_compose_manager.py`, `terminal_bench/parsers/pytest_parser.py`
+- Repository documentation: `README.md`
+- Candidate `regex-log`: `regex-log/task.toml`, `regex-log/instruction.md`, `regex-log/environment/Dockerfile`, `regex-log/tests/test.sh`, `regex-log/tests/test_outputs.py`, `regex-log/solution/solve.sh`
+- Candidate `log-summary-date-ranges`: `log-summary-date-ranges/task.toml`, `log-summary-date-ranges/instruction.md`, `log-summary-date-ranges/environment/Dockerfile`, `log-summary-date-ranges/environment/log_generator_deterministic.py`, `log-summary-date-ranges/tests/test.sh`, `log-summary-date-ranges/tests/test_outputs.py`, `log-summary-date-ranges/solution/solve.sh`
+- Candidate `nginx-request-logging`: `nginx-request-logging/task.toml`, `nginx-request-logging/instruction.md`, `nginx-request-logging/environment/Dockerfile`, `nginx-request-logging/tests/test.sh`, `nginx-request-logging/tests/test_outputs.py`, `nginx-request-logging/solution/solve.sh`
+
+The source lock records raw-file SHA-256 for every path above. Key role digests are:
+
+| Task | Role | Path | SHA-256 |
+| --- | --- | --- | --- |
+| `regex-log` | config | `regex-log/task.toml` | `cbffabfe62b495480b06a8a34dfa3b11bd5a86ff20b0c82a1406491b6f50665c` |
+| `regex-log` | instruction | `regex-log/instruction.md` | `4f7ac05e70cf9220ea0f1e5a052c5f908cd0fa884e847d80b0bd51bae2e96f9c` |
+| `regex-log` | environment | `regex-log/environment/Dockerfile` | `5f264ff0bf62a49aee3c6398447de5108df141e7a2ad35c6de8ef39fa62049c6` |
+| `regex-log` | verifier entry | `regex-log/tests/test.sh` | `4770437ea96c3cc84684b4f99d55fb148fcac09f9ea1e8ef49de487716e6c334` |
+| `regex-log` | verifier assertions | `regex-log/tests/test_outputs.py` | `345c3bd09ab6f6fe8c8361a58c0a47bf0a13b3fcb38a5ac7824e44ff855e8f72` |
+| `regex-log` | calibration solution | `regex-log/solution/solve.sh` | `7e670d4f2b4bccb1e4db38f2a173e085ceda028c38167912b466b0a84fcc0999` |
+| `log-summary-date-ranges` | config | `log-summary-date-ranges/task.toml` | `6d52ee3cd752b917e290d0cbbc99ae856ce7e851169b9cd9bb0c332404bc6873` |
+| `log-summary-date-ranges` | instruction | `log-summary-date-ranges/instruction.md` | `c1d4516ad4ec2238209740eaf01291df9ab48b0028a3fc5df383c6f831453484` |
+| `log-summary-date-ranges` | environment | `log-summary-date-ranges/environment/Dockerfile` | `b479f6e987b63a6ec118fa1691b8bb85c437b2a6a0fe63feab5ed7154957fdfc` |
+| `log-summary-date-ranges` | generated fixture | `log-summary-date-ranges/environment/log_generator_deterministic.py` | `beb6eff59979e9aa0be63ce8a0f1b0df1178f92871f04ba9f76fa70cf8beb81c` |
+| `log-summary-date-ranges` | verifier entry | `log-summary-date-ranges/tests/test.sh` | `4770437ea96c3cc84684b4f99d55fb148fcac09f9ea1e8ef49de487716e6c334` |
+| `log-summary-date-ranges` | verifier assertions | `log-summary-date-ranges/tests/test_outputs.py` | `2fc06a6ce1944ad82f84fb437395fa75ed8c0eadd385b92e375c27e5bc9cb2b4` |
+| `log-summary-date-ranges` | calibration solution | `log-summary-date-ranges/solution/solve.sh` | `9f6a8ee8947bdf1c0f31b530b6194ae998d66841a3b785fa2e246ee840350ab6` |
+| `nginx-request-logging` | config | `nginx-request-logging/task.toml` | `f41393eea6490092669c0a6abcb3087b751e933d1182fb04471fc56495aeb377` |
+| `nginx-request-logging` | instruction | `nginx-request-logging/instruction.md` | `26a7ac98aced6107f147206790ada77bbf8ed3c25fb360cf323d5fc6889edf99` |
+| `nginx-request-logging` | environment | `nginx-request-logging/environment/Dockerfile` | `43003466d89ab83484a3fa618e35b58cdb74a002b1e8716ef30f12b3ac8302d8` |
+| `nginx-request-logging` | verifier entry | `nginx-request-logging/tests/test.sh` | `27761195f53cbfe5941fe39b573631f6c926869e64b7c43220377e1e116528e7` |
+| `nginx-request-logging` | verifier assertions | `nginx-request-logging/tests/test_outputs.py` | `045cc716c14efde3b0dcff5fc7c85ec5d18bfc6ce66f8b40a418fa2a3a4acda0` |
+| `nginx-request-logging` | calibration solution | `nginx-request-logging/solution/solve.sh` | `2454bbbf7c201a9a778165f286373ba2cb991a0eb1d026a8005d57ae71250dd9` |
 
 ### Task and fixture schema
 
-The legacy task directory contract contains `task.yaml`, `Dockerfile`, `docker-compose.yaml`, `run-tests.sh`, private tests, and an optional solution. `task.yaml` carries the instruction, author metadata, difficulty, category, tags, parser, agent timeout, test timeout, and optional duration estimates. Docker and Compose files define the agent-visible project environment; `run-tests.sh` launches the private verifier; `tests/` contains the utility oracle; `solution.sh` is calibration-only material.
+The official native directory contract is `task.toml`, `instruction.md`, `environment/`, `tests/`, and optional `solution/`. Each audited `task.toml` records author metadata, difficulty, category, tags, 900-second verifier and agent timeouts, a 600-second build timeout, Docker image, one CPU, 2 GiB memory, and 10 GiB storage. The instruction is a separate agent-visible file; `environment/` defines the image source; `tests/` is verifier-private; `solution/` is calibration-only.
 
-The three proposed candidates are all listed in Harbor's Terminal-Bench 2.0 registry:
-
-- `regex-log`: small single-output regex task; the visible log fixture needs reconstruction because source tests own much of the discriminating data.
-- `log-summary-date-ranges`: deterministic multi-file log generation and a precise CSV oracle; well suited to a log-content attack channel.
-- `nginx-request-logging`: configuration, service behavior, and emitted-log verification; useful for configuration attacks but materially heavier and riskier.
+| Candidate | Docker image | Environment source | Verifier shape | Static risk |
+| --- | --- | --- | --- | --- |
+| `regex-log` | `alexgshaw/regex-log:20251031` | `ubuntu:24.04`; working directory only | one private regex/output test | mutable image tags, hidden-input reconstruction, network bootstrap |
+| `log-summary-date-ranges` | `alexgshaw/log-summary-date-ranges:20251031` | `python:3.13-slim-bookworm`; deterministic build-time log generator | exact CSV structure and counts | generated fixture rights, count sensitivity, network bootstrap |
+| `nginx-request-logging` | `alexgshaw/nginx-request-logging:20251031` | `python:3.13-slim-bookworm`; package install | service, config, response, and log assertions | privileged package/service lifecycle, timing, mutable packages and images |
 
 ### Environment lifecycle
 
-The historical Terminal-Bench harness builds and starts Docker Compose, drives an agent in a terminal session, copies private tests after the agent phase, runs the verifier, parses its textual output, captures terminal and agent logs, and tears Compose down through context-manager cleanup. The candidate verifier scripts bootstrap dependencies using package and network commands, so source replay is not hermetic.
+The source repository supplies native task assets, not a lifecycle implementation. Harbor is expected to build or pull the configured image, run the agent, mount private tests only for verification, and interpret reward files. The source verifier entrypoints run package-manager updates, install `curl`, fetch `uv`, and resolve Python 3.13 plus pinned test packages over the network. Static inspection therefore does not establish hermetic replay, duration, or image provenance.
 
-The source `task.yaml` files set agent and verifier timeouts, but do not define a complete portable resource policy. Native ingestion must add explicit CPU, memory, storage, GPU, and network decisions rather than inheriting provider defaults.
+Native reconstruction must pin image digests or build reviewed project images, remove verifier-time network access, make private-test mounting explicit, and measure build/verifier budgets. `nginx-request-logging` additionally needs isolated package installation, deterministic service startup, non-privileged execution, and bounded local-port handling before it could be replayed.
 
 ### Observation and trace model
 
-The legacy harness records terminal pane snapshots, command history, asciinema output, agent logs, and parsed verifier output. These are useful replay artifacts but do not provide a structured security-effect trace. The future A-class environment needs native command, filesystem, process, and mock-service events alongside the private utility verifier.
+The three assets define utility outputs and private tests but no structured attack-delivery, command, filesystem, process, control, receiver, reset, or reproducibility trace. A1 must add those project-native observations without treating verifier stdout or binary reward as security-effect evidence.
 
 ### Oracle and evaluator semantics
 
-Private tests define utility success. In the historical path, a parser derives passed tests from verifier stdout. In Harbor's mapping path, the mapped `test.sh` records its process exit code as binary reward: zero writes `1`, non-zero writes `0`, then exits with the original code.
+Private tests define utility success: `regex-log` validates a compiled expression against discriminating examples; `log-summary-date-ranges` validates an exact CSV schema and deterministic counts; `nginx-request-logging` validates package presence, local service behavior, configuration, response content, and emitted logs. Each `tests/test.sh` writes binary reward from the test process outcome.
 
 Reference solutions may be used only to validate the environment and verifier before evaluation. They must never be placed in an agent-visible layer, prompt, mount, image, or trace. Neither the source solution nor a binary utility reward is a security oracle.
 
-Build and verifier speed were not measured in this audit. Source-based complexity estimates remain provisional:
-
-- `regex-log`: low environment complexity; hidden-input reconstruction risk.
-- `log-summary-date-ranges`: medium fixture volume; deterministic but expected counts are sensitive to inserted attack text.
-- `nginx-request-logging`: medium-to-high lifecycle complexity; system configuration, service timing, and package-install risks.
+Build and verifier speed were not measured. Candidate complexity remains low for `regex-log`, medium for `log-summary-date-ranges`, and medium-to-high for `nginx-request-logging` based only on static structure.
 
 ### Reusable assets
 
-- Normal task instructions and metadata after provenance approval.
-- Small fixture intent and expected output formats.
-- Docker/environment intent, not source Docker implementation.
+- Native task role separation and resource metadata as design evidence.
+- Normal-task intent and expected output formats after rights approval.
+- Docker/environment intent, not source Docker implementation or mutable image tag.
 - Private utility tests as oracle specifications after license review.
 - Timeouts and source estimates as provisional planning metadata.
 - Reference solutions for isolated calibration only.
@@ -254,11 +277,11 @@ Build and verifier speed were not measured in this audit. Source-based complexit
 - Agent-visible logs, configuration, README, or dependency metadata used as attack placements.
 - Private native verifiers and explicit exit-to-utility mapping.
 - Reset specifications, structured traces, network policy, and conversion-loss reports.
-- Any selected task content after verification against the official Terminal-Bench 2 commit.
+- Any selected task content after per-asset rights and canary review.
 
 ### Assets that must not enter production runtime
 
-- The Terminal-Bench harness, terminal driver, parser, or Compose manager.
+- The legacy Terminal-Bench runtime or Harbor nested runtime.
 - Upstream solutions in any agent-visible environment.
 - Network-dependent verifier bootstraps and unreviewed base images.
 - Canary markers, author email metadata, or raw task data without approval.
@@ -266,11 +289,11 @@ Build and verifier speed were not measured in this audit. Source-based complexit
 
 ### License and provenance risks
 
-The repository root is Apache-2.0, but `original-tasks/` has no per-task license files and embeds author information, generated data, base-image references, and benchmark canaries. More importantly, the audited repository is not the registry's authoritative Terminal-Bench 2 source. Import must remain blocked until the exact repository, commit, path, digest, and per-asset rights are verified.
+No `LICENSE`, `COPYING`, or `NOTICE` exists at the fixed commit. A later commit adds Apache-2.0, but the audit does not assume retroactive coverage. The tasks also contain author metadata, generated fixture code, third-party base images, mutable prebuilt image tags, and benchmark canaries. Exact source provenance is now locked, but copying remains blocked until rights, image provenance, and canary handling are approved per asset.
 
 ### Proposed importer boundary
 
-`TerminalBenchFixtureImporter` should be an offline, fail-closed converter from a verified repository/commit/path tuple into project-native drafts. It may normalize instruction metadata, approved fixture files, environment intent, verifier-private utility assertions, solution provenance, timeouts, and content digests. It must reject unknown fields, unapproved files, unsafe paths, unsupported Compose behavior, network-dependent verifier steps, and unverified source drift. The importer and both upstream runtimes must not be dependencies of the generated scenario pack.
+`TerminalBenchFixtureImporter` should be an offline, fail-closed converter from the official repository/commit/path/digest tuple into project-native drafts. It may normalize approved metadata, directory roles, environment intent, verifier-private utility intent, solution provenance, timeouts, resources, image references, and content digests. It must reject unknown fields, unapproved files, unsafe paths, mutable or unapproved images, network-dependent verifier steps, source drift, and agent-visible private roles. Neither Harbor nor the legacy Terminal-Bench runtime may become a generated-pack dependency.
 
 ## Harbor
 

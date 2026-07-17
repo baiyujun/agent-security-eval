@@ -1,0 +1,258 @@
+source_lock_version: 1
+audit_date: "2026-07-16"
+
+sources:
+  saber:
+    name: SABER
+    repository: https://github.com/sssr-lab/SABER
+    local_checkout: ../reference-sources/saber
+    commit: bfdffb10c3887b38e1bd57ae2e548faa8f2049e9
+    commit_date: "2026-06-05T18:47:29+08:00"
+    license: Apache-2.0
+    data_license: REVIEW_REQUIRED
+    audited_files:
+      - README.md
+      - AGENTS.md
+      - LICENSE
+      - LICENSES/THIRD-PARTY.md
+      - dataset/README.md
+      - dataset/manifest.json
+      - Dockerfile
+      - sandbox_shell.py
+      - task_runtime.py
+      - mcp_runtime.py
+      - run_osbench.py
+      - judge_osbench.py
+      - tasks/A/info_leak/A_info_001.json
+      - tasks/A/code_tampering/A_code_041.json
+      - tasks/B/info_leak/B_info_001.json
+      - tasks/B/code_tampering/B_code_001.json
+      - tasks/C/info_leak/C_info_001.json
+      - tasks/C/code_tampering/C_code_001.json
+    copied_files: []
+    restrictions:
+      - The root notice assigns SABER-authored task material to CC-BY-4.0, while dataset/README.md declares Apache-2.0; resolve the conflict before copying or redistributing task data.
+      - Do not treat command regexes, simulated network success, or aggregate runner and judge scores as production security truth.
+      - Do not execute upstream initialization commands or MCP shell handlers outside a fresh isolated sandbox.
+    dirty_checkout: false
+    audit_date: "2026-07-16"
+
+  inspect-evals-codeipi:
+    name: Inspect Evals / CodeIPI
+    repository: https://github.com/UKGovernmentBEIS/inspect_evals
+    local_checkout: ../reference-sources/inspect_evals
+    commit: 3fda7b008453f8ba6bb7b1471e8fbd1865d2257e
+    commit_date: "2026-07-15T14:41:12+10:00"
+    license: MIT
+    data_license: REVIEW_REQUIRED
+    audited_files:
+      - README.md
+      - LICENSE
+      - NOTICE
+      - pyproject.toml
+      - src/inspect_evals/ipi_coding_agent/README.md
+      - src/inspect_evals/ipi_coding_agent/eval.yaml
+      - src/inspect_evals/ipi_coding_agent/dataset/samples.json
+      - src/inspect_evals/ipi_coding_agent/ipi_coding_agent.py
+      - src/inspect_evals/ipi_coding_agent/setup.py
+      - src/inspect_evals/ipi_coding_agent/scorer.py
+      - src/inspect_evals/ipi_coding_agent/docker/Dockerfile
+      - src/inspect_evals/ipi_coding_agent/docker/compose.yaml
+      - src/inspect_evals/ipi_coding_agent/tests/test_scorer.py
+      - tests/ipi_coding_agent/test_e2e.py
+    copied_files: []
+    restrictions:
+      - No independent license was found for the benchmark sample data or embedded repository fixtures; review before copying raw records.
+      - Reconstruct injection-bearing fixtures and canaries semantically instead of copying payloads or static secret markers.
+      - Separate secret observation, assistant disclosure, attempted exfiltration, executed outbound requests, and receiver-side effects.
+    dirty_checkout: false
+    audit_date: "2026-07-16"
+
+  terminal-bench-2:
+    name: Terminal-Bench 2
+    repository: https://github.com/harbor-framework/terminal-bench-2
+    local_checkout: ../reference-sources/terminal-bench-2
+    commit: 69671fbaac6d67a7ef0dfec016cc38a64ef7a77c
+    commit_date: "2025-10-31T06:35:10+00:00"
+    clone_mode: full
+    shallow_repository: false
+    partial_clone: false
+    license: NOT_PRESENT_AT_FIXED_COMMIT
+    data_license: REVIEW_REQUIRED
+    audited_files:
+      - README.md
+      - regex-log/task.toml
+      - regex-log/instruction.md
+      - regex-log/environment/Dockerfile
+      - regex-log/tests/test.sh
+      - regex-log/tests/test_outputs.py
+      - regex-log/solution/solve.sh
+      - log-summary-date-ranges/task.toml
+      - log-summary-date-ranges/instruction.md
+      - log-summary-date-ranges/environment/Dockerfile
+      - log-summary-date-ranges/environment/log_generator_deterministic.py
+      - log-summary-date-ranges/tests/test.sh
+      - log-summary-date-ranges/tests/test_outputs.py
+      - log-summary-date-ranges/solution/solve.sh
+      - nginx-request-logging/task.toml
+      - nginx-request-logging/instruction.md
+      - nginx-request-logging/environment/Dockerfile
+      - nginx-request-logging/tests/test.sh
+      - nginx-request-logging/tests/test_outputs.py
+      - nginx-request-logging/solution/solve.sh
+    file_sha256:
+      README.md: e44af60365a78d7fd74af9c738d258553e9a8c2c86f4d53ef781b7241337958f
+      regex-log/task.toml: cbffabfe62b495480b06a8a34dfa3b11bd5a86ff20b0c82a1406491b6f50665c
+      regex-log/instruction.md: 4f7ac05e70cf9220ea0f1e5a052c5f908cd0fa884e847d80b0bd51bae2e96f9c
+      regex-log/environment/Dockerfile: 5f264ff0bf62a49aee3c6398447de5108df141e7a2ad35c6de8ef39fa62049c6
+      regex-log/tests/test.sh: 4770437ea96c3cc84684b4f99d55fb148fcac09f9ea1e8ef49de487716e6c334
+      regex-log/tests/test_outputs.py: 345c3bd09ab6f6fe8c8361a58c0a47bf0a13b3fcb38a5ac7824e44ff855e8f72
+      regex-log/solution/solve.sh: 7e670d4f2b4bccb1e4db38f2a173e085ceda028c38167912b466b0a84fcc0999
+      log-summary-date-ranges/task.toml: 6d52ee3cd752b917e290d0cbbc99ae856ce7e851169b9cd9bb0c332404bc6873
+      log-summary-date-ranges/instruction.md: c1d4516ad4ec2238209740eaf01291df9ab48b0028a3fc5df383c6f831453484
+      log-summary-date-ranges/environment/Dockerfile: b479f6e987b63a6ec118fa1691b8bb85c437b2a6a0fe63feab5ed7154957fdfc
+      log-summary-date-ranges/environment/log_generator_deterministic.py: beb6eff59979e9aa0be63ce8a0f1b0df1178f92871f04ba9f76fa70cf8beb81c
+      log-summary-date-ranges/tests/test.sh: 4770437ea96c3cc84684b4f99d55fb148fcac09f9ea1e8ef49de487716e6c334
+      log-summary-date-ranges/tests/test_outputs.py: 2fc06a6ce1944ad82f84fb437395fa75ed8c0eadd385b92e375c27e5bc9cb2b4
+      log-summary-date-ranges/solution/solve.sh: 9f6a8ee8947bdf1c0f31b530b6194ae998d66841a3b785fa2e246ee840350ab6
+      nginx-request-logging/task.toml: f41393eea6490092669c0a6abcb3087b751e933d1182fb04471fc56495aeb377
+      nginx-request-logging/instruction.md: 26a7ac98aced6107f147206790ada77bbf8ed3c25fb360cf323d5fc6889edf99
+      nginx-request-logging/environment/Dockerfile: 43003466d89ab83484a3fa618e35b58cdb74a002b1e8716ef30f12b3ac8302d8
+      nginx-request-logging/tests/test.sh: 27761195f53cbfe5941fe39b573631f6c926869e64b7c43220377e1e116528e7
+      nginx-request-logging/tests/test_outputs.py: 045cc716c14efde3b0dcff5fc7c85ec5d18bfc6ce66f8b40a418fa2a3a4acda0
+      nginx-request-logging/solution/solve.sh: 2454bbbf7c201a9a778165f286373ba2cb991a0eb1d026a8005d57ae71250dd9
+    copied_files: []
+    restrictions:
+      - The fixed commit predates the repository's root Apache-2.0 LICENSE addition; do not apply a later license retroactively to this snapshot.
+      - Confirm per-task authorship, generated fixtures, base-image rights, Docker image provenance, and benchmark-canary restrictions before copying any task asset.
+      - Keep reference solutions hidden from evaluated agents and use them only for isolated calibration and verifier validation.
+      - Source Docker image tags are mutable and unpinned by digest; source verifiers perform network-dependent package bootstrap.
+      - Candidate build and verifier duration remain unmeasured in this static audit.
+    dirty_checkout: false
+    audit_date: "2026-07-16"
+
+  harbor:
+    name: Harbor
+    repository: https://github.com/harbor-framework/harbor
+    local_checkout: ../reference-sources/harbor
+    commit: d3e606d9f7d1e111bb22d3d820ebed03ec300eb3
+    commit_date: "2026-07-15T13:10:44-07:00"
+    license: Apache-2.0
+    data_license: REVIEW_REQUIRED
+    audited_files:
+      - README.md
+      - LICENSE
+      - pyproject.toml
+      - src/harbor/mappers/terminal_bench.py
+      - src/harbor/models/task/config.py
+      - src/harbor/models/trial/paths.py
+      - src/harbor/verifier/verifier.py
+      - tests/unit/mappers/test_terminal_bench.py
+    copied_files: []
+    restrictions:
+      - Harbor is a mapping reference only and must not become a nested production runtime or orchestration dependency for this import path.
+      - Review any copied adapter templates, images, or example assets separately even though repository code is Apache-2.0.
+      - Preserve the semantic distinction between verifier process exit and the explicit reward file parsed by Harbor.
+    dirty_checkout: false
+    audit_date: "2026-07-16"
+
+  mcp-safetybench:
+    name: MCP-SafetyBench
+    repository: https://github.com/xjzzzzzzzz/MCPSafety
+    local_checkout: ../reference-sources/mcp-safetybench
+    commit: 7872437b6369aac1150e3a19e350a981dc554f81
+    commit_date: "2025-12-18T16:03:38+08:00"
+    license: REVIEW_REQUIRED
+    data_license: REVIEW_REQUIRED
+    audited_files:
+      - README.md
+      - pyproject.toml
+      - package.json
+      - mcpuniverse/benchmark/task.py
+      - mcpuniverse/benchmark/runner.py
+      - mcpuniverse/benchmark/cleanups.py
+      - mcpuniverse/evaluator/evaluator.py
+      - mcpuniverse/evaluator/functions.py
+      - mcpuniverse/mcp/client.py
+      - mcpuniverse/mcp/manager.py
+      - mcpuniverse/mcp/configs/server_list.json
+      - mcpuniverse/benchmark/configs/test/financial_analysis/yfinance_task_0002.json
+      - mcpuniverse/benchmark/configs/test/financial_analysis/yfinance_task_0026.json
+      - mcpuniverse/benchmark/configs/test/financial_analysis/yfinance_task_0039.json
+      - tests/benchmark/test_task.py
+      - tests/benchmark/test_cleanup.py
+    copied_files: []
+    restrictions:
+      - The current tree has no LICENSE, COPYING, or NOTICE; package metadata alone claims BSD-3-Clause while retaining MCP-Universe provenance.
+      - Reconstruct concepts only; do not copy attack task prose, implementation code, payloads, credentials, service URLs, or evaluator labels.
+      - Upstream setup can rewrite source files, mutate environment credentials, and call live services; never execute it for ingestion.
+      - Cleanup coverage is incomplete and some cleanup depends on actual trace records and best-effort restoration.
+    dirty_checkout: false
+    audit_date: "2026-07-16"
+
+  mcp-universe:
+    name: MCP-Universe
+    repository: https://github.com/SalesforceAIResearch/MCP-Universe
+    local_checkout: ../reference-sources/mcp-universe
+    commit: 48b453021694d9823d308627fb7f6b7edd29541a
+    commit_date: "2026-06-23T09:01:43+00:00"
+    license: Apache-2.0
+    data_license: REVIEW_REQUIRED
+    audited_files:
+      - README.md
+      - LICENSE.txt
+      - license_info.md
+      - pyproject.toml
+      - .gitmodules
+      - mcpuniverse/benchmark/task.py
+      - mcpuniverse/benchmark/runner.py
+      - mcpuniverse/benchmark/prepares.py
+      - mcpuniverse/benchmark/cleanups.py
+      - mcpuniverse/evaluator/evaluator.py
+      - mcpuniverse/tracer/types.py
+      - mcpuniverse/mcp/manager.py
+      - mcpuniverse/mcp/configs/server_list.json
+      - third_party/mcpmark/LICENSE
+      - third_party/mcpmark/README.md
+    copied_files: []
+    restrictions:
+      - MCP-SafetyBench vendors a divergent MCP-Universe source fork rather than declaring MCP-Universe as a runtime dependency.
+      - Live-service tasks, credentials, preparers, cleanup functions, and service state are not candidates for direct import.
+      - The MCPMark gitlink is pinned to a684e7a3069f824bf5230a7cffe0a4de2add7f0d and must retain its separate provenance and license review.
+    dirty_checkout: false
+    audit_date: "2026-07-16"
+
+  mcpsecbench:
+    name: MCPSecBench
+    repository: https://github.com/AIS2Lab/MCPSecBench
+    local_checkout: ../reference-sources/mcpsecbench
+    commit: 7612c5a3e811dcf01f64e4f2bb324591a2feaaf4
+    commit_date: "2026-03-05T04:17:17+08:00"
+    license: MIT
+    data_license: REVIEW_REQUIRED
+    audited_files:
+      - README.md
+      - LICENSE
+      - code/README.md
+      - code/pyproject.toml
+      - code/main.py
+      - code/addserver.py
+      - code/maliciousadd.py
+      - code/download.py
+      - code/squatting.py
+      - code/client.py
+      - code/mitm.py
+      - code/cve-2025-6514.py
+      - code/index.js
+      - code/claude_desktop_config.json
+      - code/cursor_config.json
+      - data/README.md
+      - data/data.json
+      - data/experiments.csv
+    copied_files: []
+    restrictions:
+      - Treat experimental prompts, labels, screenshots, and desktop-product media as REVIEW_REQUIRED data with third-party and privacy considerations.
+      - Do not import PyAutoGUI workflows, screenshot verdicts, manual desktop configuration, network PoCs, absolute paths, or live-service clients.
+      - Use only the taxonomy and reconstruct deterministic local malicious-server behavior from scratch.
+    dirty_checkout: false
+    audit_date: "2026-07-16"

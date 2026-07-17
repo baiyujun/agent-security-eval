@@ -202,240 +202,78 @@ references:
     copied_files: []
 
   - name: SABER
-    repository: https://github.com/sssr-lab/SABER
-    local_checkout: references-local/saber
-    commit: bfdffb10c3887b38e1bd57ae2e548faa8f2049e9
-    commit_date: "2026-06-05T18:47:29+08:00"
-    license: Apache-2.0
-    data_license: REVIEW_REQUIRED
+    source_lock: references/source-locks/ac-reference-sources.yaml#sources.saber
+    classification_status: verified-at-fixed-commit-with-license-block
+    reuse_candidates:
+      - capability: A-class scenario taxonomy, attack-channel placement, and oracle intent
+        classification: DESIGN_REFERENCE
+      - capability: raw task records, fixture content, payloads, and command regexes
+        classification: REJECT
     role: A-class Repo/Shell scenario, fixture, attack-channel, and oracle-intent source
-    integration_type: scenario_import_candidate
-    audited_files:
-      - README.md
-      - AGENTS.md
-      - LICENSE
-      - LICENSES/THIRD-PARTY.md
-      - dataset/README.md
-      - dataset/manifest.json
-      - Dockerfile
-      - sandbox_shell.py
-      - task_runtime.py
-      - mcp_runtime.py
-      - run_osbench.py
-      - judge_osbench.py
-      - tasks/A/info_leak/A_info_001.json
-      - tasks/A/code_tampering/A_code_041.json
-      - tasks/B/info_leak/B_info_001.json
-      - tasks/B/code_tampering/B_code_001.json
-      - tasks/C/info_leak/C_info_001.json
-      - tasks/C/code_tampering/C_code_001.json
-    copied_files: []
-    restrictions:
-      - The root notice assigns SABER-authored task material to CC-BY-4.0, while dataset/README.md declares Apache-2.0; resolve the conflict before copying or redistributing task data.
-      - Do not treat command regexes, simulated network success, or aggregate runner and judge scores as production security truth.
-      - Do not execute upstream initialization commands or MCP shell handlers outside a fresh isolated sandbox.
-    dirty_checkout: false
-    audit_date: "2026-07-16"
+    first_version_decision: semantic reconstruction only; reject raw task data until the conflicting data-license statements are resolved
 
   - name: Inspect Evals / CodeIPI
-    repository: https://github.com/UKGovernmentBEIS/inspect_evals
-    local_checkout: references-local/inspect-evals
-    commit: 3fda7b008453f8ba6bb7b1471e8fbd1865d2257e
-    commit_date: "2026-07-15T14:41:12+10:00"
-    license: MIT
-    data_license: REVIEW_REQUIRED
+    source_lock: references/source-locks/ac-reference-sources.yaml#sources.inspect-evals-codeipi
+    classification_status: verified-at-fixed-commit-with-license-block
+    reuse_candidates:
+      - capability: sample identity, injection-vector metadata, fixture path manifest, and verifier intent
+        classification: DESIGN_REFERENCE
+      - capability: raw sample prose, embedded repository fixtures, static canaries, and source scorer
+        classification: REJECT
     role: A-class coding-agent indirect prompt-injection sample and scorer reference
-    integration_type: sample_import_candidate
-    audited_files:
-      - README.md
-      - LICENSE
-      - NOTICE
-      - pyproject.toml
-      - src/inspect_evals/ipi_coding_agent/README.md
-      - src/inspect_evals/ipi_coding_agent/eval.yaml
-      - src/inspect_evals/ipi_coding_agent/dataset/samples.json
-      - src/inspect_evals/ipi_coding_agent/ipi_coding_agent.py
-      - src/inspect_evals/ipi_coding_agent/setup.py
-      - src/inspect_evals/ipi_coding_agent/scorer.py
-      - src/inspect_evals/ipi_coding_agent/docker/Dockerfile
-      - src/inspect_evals/ipi_coding_agent/docker/compose.yaml
-      - src/inspect_evals/ipi_coding_agent/tests/test_scorer.py
-      - tests/ipi_coding_agent/test_e2e.py
-    copied_files: []
-    restrictions:
-      - No independent license was found for the benchmark sample data or embedded repository fixtures; review before copying raw records.
-      - Reconstruct injection-bearing fixtures and canaries semantically instead of copying payloads or static secret markers.
-      - Separate secret observation, assistant disclosure, attempted exfiltration, executed outbound requests, and receiver-side effects.
-    dirty_checkout: false
-    audit_date: "2026-07-16"
+    first_version_decision: reconstruct compact synthetic repository cases; reject raw records until an independent data license is established
 
-  - name: Terminal-Bench 2 task snapshots in Terminal-Bench
-    repository: https://github.com/harbor-framework/terminal-bench
-    local_checkout: references-local/terminal-bench
-    commit: d28711d0da2675d0bb1d56de45ae5df6082438a3
-    commit_date: "2026-07-10T22:19:08-07:00"
-    license: Apache-2.0
-    data_license: REVIEW_REQUIRED
+  - name: Terminal-Bench 2
+    source_lock: references/source-locks/ac-reference-sources.yaml#sources.terminal-bench-2
+    classification_status: verified-at-fixed-commit-with-license-block
+    reuse_candidates:
+      - capability: Harbor-native task roles, resource configuration, and utility-verifier intent
+        classification: DESIGN_REFERENCE
+      - capability: raw instructions, environments, private tests, generated fixtures, and solutions
+        classification: REJECT
     role: A-class native terminal environment, normal task, and verifier source
-    integration_type: fixture_import_candidate
-    audited_files:
-      - README.md
-      - LICENSE
-      - pyproject.toml
-      - original-tasks/regex-log/task.yaml
-      - original-tasks/regex-log/Dockerfile
-      - original-tasks/regex-log/docker-compose.yaml
-      - original-tasks/regex-log/run-tests.sh
-      - original-tasks/regex-log/tests/test_outputs.py
-      - original-tasks/regex-log/solution.sh
-      - original-tasks/log-summary-date-ranges/task.yaml
-      - original-tasks/log-summary-date-ranges/Dockerfile
-      - original-tasks/log-summary-date-ranges/docker-compose.yaml
-      - original-tasks/log-summary-date-ranges/log_generator_deterministic.py
-      - original-tasks/log-summary-date-ranges/run-tests.sh
-      - original-tasks/log-summary-date-ranges/tests/test_outputs.py
-      - original-tasks/log-summary-date-ranges/solution.sh
-      - original-tasks/nginx-request-logging/task.yaml
-      - original-tasks/nginx-request-logging/Dockerfile
-      - original-tasks/nginx-request-logging/docker-compose.yaml
-      - original-tasks/nginx-request-logging/run-tests.sh
-      - original-tasks/nginx-request-logging/tests/test_outputs.py
-      - original-tasks/nginx-request-logging/solution.sh
-    copied_files: []
-    restrictions:
-      - The audited checkout origin is harbor-framework/terminal-bench, while Harbor registers terminal-bench@2.0 from laude-institute/terminal-bench-2 at 69671fbaac6d67a7ef0dfec016cc38a64ef7a77c; verify snapshot equivalence against that source before import.
-      - Confirm per-task authorship, data, generated fixtures, base images, and canary restrictions before copying any task asset.
-      - Keep reference solutions hidden from evaluated agents and use them only for calibration and verifier validation.
-      - Candidate build and verifier duration remain unmeasured in this audit.
-    dirty_checkout: false
-    audit_date: "2026-07-16"
+    first_version_decision: use the official fixed commit as design evidence only; reconstruct two small native drafts and keep raw assets blocked pending rights and image review
 
   - name: Harbor
-    repository: https://github.com/harbor-framework/harbor
-    local_checkout: references-local/harbor
-    commit: d3e606d9f7d1e111bb22d3d820ebed03ec300eb3
-    commit_date: "2026-07-15T13:10:44-07:00"
-    license: Apache-2.0
-    data_license: REVIEW_REQUIRED
+    source_lock: references/source-locks/ac-reference-sources.yaml#sources.harbor
+    classification_status: verified-at-fixed-commit
+    reuse_candidates:
+      - capability: native task-directory roles, resource schema, and reward-file semantics
+        classification: DESIGN_REFERENCE
+      - capability: mapper, job, trial, environment, verifier, and orchestration runtime
+        classification: REJECT
     role: Terminal-Bench-to-native-task mapping and verifier-semantics reference
-    integration_type: design_reference
-    audited_files:
-      - README.md
-      - LICENSE
-      - pyproject.toml
-      - src/harbor/mappers/terminal_bench.py
-      - src/harbor/models/task/config.py
-      - src/harbor/models/trial/paths.py
-      - src/harbor/verifier/verifier.py
-      - tests/unit/mappers/test_terminal_bench.py
-    copied_files: []
-    restrictions:
-      - Harbor is a mapping reference only and must not become a nested production runtime or orchestration dependency for this import path.
-      - Review any copied adapter templates, images, or example assets separately even though repository code is Apache-2.0.
-      - Preserve the semantic distinction between verifier process exit and the explicit reward file parsed by Harbor.
-    dirty_checkout: false
-    audit_date: "2026-07-16"
+    first_version_decision: borrow directory-role and reward semantics; reject the mapper and nested runtime
 
   - name: MCP-SafetyBench
-    repository: https://github.com/xjzzzzzzzz/MCPSafety
-    local_checkout: references-local/mcp-safetybench
-    commit: 7872437b6369aac1150e3a19e350a981dc554f81
-    commit_date: "2025-12-18T16:03:38+08:00"
-    license: REVIEW_REQUIRED
-    data_license: REVIEW_REQUIRED
+    source_lock: references/source-locks/ac-reference-sources.yaml#sources.mcp-safetybench
+    classification_status: verified-at-fixed-commit-with-license-block
+    reuse_candidates:
+      - capability: tool-poisoning and rug-pull transition semantics
+        classification: DESIGN_REFERENCE
+      - capability: raw attack tasks, implementation code, runner, evaluator labels, and live-service setup
+        classification: REJECT
     role: C-class MCP attack schema, transition, evaluator, and cleanup reference
-    integration_type: semantic_reconstruction_only
-    audited_files:
-      - README.md
-      - pyproject.toml
-      - package.json
-      - mcpuniverse/benchmark/task.py
-      - mcpuniverse/benchmark/runner.py
-      - mcpuniverse/benchmark/cleanups.py
-      - mcpuniverse/evaluator/evaluator.py
-      - mcpuniverse/evaluator/functions.py
-      - mcpuniverse/mcp/client.py
-      - mcpuniverse/mcp/manager.py
-      - mcpuniverse/mcp/configs/server_list.json
-      - mcpuniverse/benchmark/configs/test/financial_analysis/yfinance_task_0002.json
-      - mcpuniverse/benchmark/configs/test/financial_analysis/yfinance_task_0026.json
-      - mcpuniverse/benchmark/configs/test/financial_analysis/yfinance_task_0039.json
-      - tests/benchmark/test_task.py
-      - tests/benchmark/test_cleanup.py
-    copied_files: []
-    restrictions:
-      - The current tree has no LICENSE, COPYING, or NOTICE; package metadata alone claims BSD-3-Clause while retaining MCP-Universe provenance.
-      - Reconstruct concepts only; do not copy attack task prose, implementation code, payloads, credentials, service URLs, or evaluator labels.
-      - Upstream setup can rewrite source files, mutate environment credentials, and call live services; never execute it for ingestion.
-      - Cleanup coverage is incomplete and some cleanup depends on actual trace records and best-effort restoration.
-    dirty_checkout: false
-    audit_date: "2026-07-16"
+    first_version_decision: reconstruct deterministic local patterns only; import no source task, code, credential, URL, evaluator, or cleanup implementation
 
   - name: MCP-Universe
-    repository: https://github.com/SalesforceAIResearch/MCP-Universe
-    local_checkout: references-local/mcp-universe
-    commit: 48b453021694d9823d308627fb7f6b7edd29541a
-    commit_date: "2026-06-23T09:01:43+00:00"
-    license: Apache-2.0
-    data_license: REVIEW_REQUIRED
+    source_lock: references/source-locks/ac-reference-sources.yaml#sources.mcp-universe
+    classification_status: verified-at-fixed-commit
+    reuse_candidates:
+      - capability: fork provenance plus baseline task, trace, evaluator, and cleanup concepts
+        classification: DESIGN_REFERENCE
+      - capability: live-service tasks, credentials, preparers, runtime, and service cleanup
+        classification: REJECT
     role: MCP-SafetyBench fork provenance and baseline task, evaluator, trace, and cleanup reference
-    integration_type: provenance_reference
-    audited_files:
-      - README.md
-      - LICENSE.txt
-      - license_info.md
-      - pyproject.toml
-      - .gitmodules
-      - mcpuniverse/benchmark/task.py
-      - mcpuniverse/benchmark/runner.py
-      - mcpuniverse/benchmark/prepares.py
-      - mcpuniverse/benchmark/cleanups.py
-      - mcpuniverse/evaluator/evaluator.py
-      - mcpuniverse/tracer/types.py
-      - mcpuniverse/mcp/manager.py
-      - mcpuniverse/mcp/configs/server_list.json
-      - third_party/mcpmark/LICENSE
-      - third_party/mcpmark/README.md
-    copied_files: []
-    restrictions:
-      - MCP-SafetyBench vendors a divergent MCP-Universe source fork rather than declaring MCP-Universe as a runtime dependency.
-      - Live-service tasks, credentials, preparers, cleanup functions, and service state are not candidates for direct import.
-      - The MCPMark gitlink is pinned to a684e7a3069f824bf5230a7cffe0a4de2add7f0d and must retain its separate provenance and license review.
-    dirty_checkout: false
-    audit_date: "2026-07-16"
+    first_version_decision: provenance and lifecycle design reference only; no runtime or live-service asset reuse
 
   - name: MCPSecBench
-    repository: https://github.com/AIS2Lab/MCPSecBench
-    local_checkout: references-local/mcpsecbench
-    commit: 7612c5a3e811dcf01f64e4f2bb324591a2feaaf4
-    commit_date: "2026-03-05T04:17:17+08:00"
-    license: MIT
-    data_license: REVIEW_REQUIRED
+    source_lock: references/source-locks/ac-reference-sources.yaml#sources.mcpsecbench
+    classification_status: verified-at-fixed-commit-with-data-license-block
+    reuse_candidates:
+      - capability: malicious-server-addition taxonomy and server-selection intent
+        classification: DESIGN_REFERENCE
+      - capability: scripts, experimental data, GUI automation, screenshots, desktop configuration, and network PoCs
+        classification: REJECT
     role: C-class attack taxonomy and malicious-server seed reference
-    integration_type: reference_only
-    audited_files:
-      - README.md
-      - LICENSE
-      - code/README.md
-      - code/pyproject.toml
-      - code/main.py
-      - code/addserver.py
-      - code/maliciousadd.py
-      - code/download.py
-      - code/squatting.py
-      - code/client.py
-      - code/mitm.py
-      - code/cve-2025-6514.py
-      - code/index.js
-      - code/claude_desktop_config.json
-      - code/cursor_config.json
-      - data/README.md
-      - data/data.json
-      - data/experiments.csv
-    copied_files: []
-    restrictions:
-      - Treat experimental prompts, labels, screenshots, and desktop-product media as REVIEW_REQUIRED data with third-party and privacy considerations.
-      - Do not import PyAutoGUI workflows, screenshot verdicts, manual desktop configuration, network PoCs, absolute paths, or live-service clients.
-      - Use only the taxonomy and reconstruct deterministic local malicious-server behavior from scratch.
-    dirty_checkout: false
-    audit_date: "2026-07-16"
+    first_version_decision: taxonomy-only design reference; reconstruct one deterministic local server-addition pattern from scratch
