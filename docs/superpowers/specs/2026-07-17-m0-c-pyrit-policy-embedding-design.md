@@ -5,7 +5,7 @@
 M0-C validates a project-controlled, single-Run attack policy over PyRIT `0.14.0`:
 
 ```text
-ExecutionRunSpec + open TargetSession
+ExecutionRunSpec + explicit attack_objective + open TargetSession
     -> TargetSessionPromptTarget
     -> project-controlled PyRIT turn loop
     -> AssertionBackedPyRITScorer
@@ -20,6 +20,11 @@ The only public runtime boundaries added by this milestone are `TargetSessionPro
 `PyRITAttackPolicy`, `AttackPolicyResult`, and `PyRITMemoryScope`. Supporting enums and immutable
 turn records remain subordinate value types. M0-C does not add scenario assets, a Campaign
 Controller, a production Execution Backend, a production Final Assertion Engine, or `RunOutcome`.
+
+`PyRITAttackPolicy.run()` accepts `attack_objective` as a required Policy input. It is distinct from
+the normal `ExecutionScenarioSpec.user_task` and from the concrete
+`AttackCandidate.content` seed. M0-C does not add this field to the execution or Benchmark domain
+models; the future `ScenarioCase` compilation boundary is responsible for providing it.
 
 ## Dependency Audit
 
@@ -60,6 +65,11 @@ Only `OBJECTIVE_ACHIEVED` produces PyRIT `AttackOutcome.SUCCESS`. `TERMINAL_BLOC
 `INVALID_RUN`, and budget exhaustion produce `FAILURE`; operational exceptions produce PyRIT
 `ERROR` through the existing Strategy event lifecycle. The policy never uses `AttackExecutor` or a
 second controller.
+
+The explicit, non-blank `attack_objective` is passed to PyRIT's `execute_async(objective=...)` and
+therefore drives the adversarial system prompt. `user_task` remains the benign task represented by
+the execution scenario, while `AttackCandidate.content` remains only the initial concrete attack
+seed.
 
 The adversarial model receives PyRIT's `score_rationale`, which M0-B already restricts to
 `ProgressDecision.policy_feedback`. Complete score metadata and `internal_rationale` remain trusted
@@ -163,6 +173,8 @@ Deterministic tests use real PyRIT `0.14.0` message, scorer, strategy, memory, a
 paths with fake project Target Sessions and fake adversarial PromptTargets. They prove:
 
 - same project Session on every turn and correlated responses;
+- distinct user task, attack objective, and attack seed, with only the attack objective rendered in
+  PyRIT's adversarial system prompt;
 - immediate stop for all three terminal project states;
 - exact budget exhaustion;
 - only sanitized policy feedback reaches the adversarial target;
