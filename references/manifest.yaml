@@ -37,7 +37,14 @@ references:
       - capability: project conversion and log-lifecycle boundary
         classification: ADAPTER_REUSE
     role: execution and sandbox backend
-    first_version_decision: validate the remaining execution contract at a pinned release
+    first_version_decision: pin 0.3.246; M0-A validates its public execution contract before broader adoption
+    runtime_dependency: inspect-ai==0.3.246
+    validation_evidence:
+      milestone: M0-A
+      status: passed-local-and-draft-pr-ci
+      date: "2026-07-16"
+      report: docs/development/m0-a-inspect-validation.md
+      public_api_only: true
     license: MIT
     license_evidence: [LICENSE]
     commercial_use: permitted-with-license-notice
