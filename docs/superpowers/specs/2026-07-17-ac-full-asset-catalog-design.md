@@ -1,6 +1,6 @@
 # A/C Full Upstream Ledger and Native Asset Catalog Design
 
-- Status: revised for specification review
+- Status: approved for implementation planning
 - Date: 2026-07-17
 - Baseline: `main@946d2cd7fc1f3819397b491e0bb174a4029696f3`
 - Branch: `codex/ac-full-asset-catalog`
