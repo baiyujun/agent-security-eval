@@ -39,7 +39,7 @@ CentralMemory binding.
 - Produces: strict immutable `TargetToolCall`, `TargetTurnResult`, and correlated
   `_JsonHttpTargetSession.send()` behavior.
 
-- [ ] **Step 1: Write failing validation and correlation tests**
+- [x] **Step 1: Write failing validation and correlation tests**
 
 ```python
 @pytest.mark.parametrize("model", [TargetToolCall, TargetTurnResult])
@@ -61,14 +61,14 @@ def test_target_session_rejects_non_increasing_turn() -> None:
         asyncio.run(session.send("two"))
 ```
 
-- [ ] **Step 2: Run the focused RED tests**
+- [x] **Step 2: Run the focused RED tests**
 
 Run: `pytest tests/unit/targets/test_http_session.py -q`
 
 Expected: failures show extra fields are accepted, foreign Session IDs are returned, and duplicate
 turns are accepted.
 
-- [ ] **Step 3: Implement minimal strict models and checks**
+- [x] **Step 3: Implement minimal strict models and checks**
 
 ```python
 NonEmptyText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
@@ -95,13 +95,13 @@ async def send(self, message: str) -> TargetTurnResult:
     return result
 ```
 
-- [ ] **Step 4: Verify GREEN and regressions**
+- [x] **Step 4: Verify GREEN and regressions**
 
 Run: `pytest tests/unit/targets tests/unit/execution -q`
 
 Expected: all tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/agentsec_eval/targets tests/unit/targets
@@ -118,7 +118,7 @@ git commit -m "fix: enforce target response correlation"
 - Consumes: existing `ProgressState`, `AttackStage`, and `ProgressDecision` fields.
 - Produces: one consistent state/stage/evidence contract for policy stopping.
 
-- [ ] **Step 1: Write parameterized RED tests**
+- [x] **Step 1: Write parameterized RED tests**
 
 ```python
 @pytest.mark.parametrize(
@@ -141,13 +141,13 @@ def test_progress_decision_rejects_inconsistent_state(
         ProgressDecision(run_id="run-1", state=state, stage_reached=stage, evidence_ids=evidence)
 ```
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 Run: `pytest tests/unit/assertions/test_progress.py -q`
 
 Expected: each new invalid combination constructs successfully before the validator is hardened.
 
-- [ ] **Step 3: Implement one after-validator**
+- [x] **Step 3: Implement one after-validator**
 
 ```python
 @model_validator(mode="after")
@@ -168,13 +168,13 @@ def validate_state_invariants(self) -> ProgressDecision:
     return self
 ```
 
-- [ ] **Step 4: Verify GREEN and M0-B**
+- [x] **Step 4: Verify GREEN and M0-B**
 
 Run: `pytest tests/unit/assertions tests/unit/integrations/pyrit tests/integration/m0b -q`
 
 Expected: all tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/agentsec_eval/assertions tests/unit/assertions
@@ -194,7 +194,7 @@ git commit -m "fix: enforce progress decision invariants"
 - Produces: `TargetSessionPromptTarget(run_id, target_session, emit_trace)` with real public
   `send_prompt_async()` compatibility.
 
-- [ ] **Step 1: Write RED tests through PyRIT's public send**
+- [x] **Step 1: Write RED tests through PyRIT's public send**
 
 ```python
 async def exercise_target() -> tuple[list[Message], RecordingSession]:
@@ -210,13 +210,13 @@ def test_prompt_target_reuses_project_session_and_preserves_lineage() -> None:
     assert all(event.payload["project_session_id"] == "session-1" for event in events)
 ```
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 Run: `pytest tests/unit/integrations/pyrit/test_prompt_target.py -q`
 
 Expected: import fails because the adapter does not exist.
 
-- [ ] **Step 3: Implement the minimal PromptTarget adapter**
+- [x] **Step 3: Implement the minimal PromptTarget adapter**
 
 ```python
 class TargetSessionPromptTarget(PromptTarget):
@@ -232,13 +232,13 @@ class TargetSessionPromptTarget(PromptTarget):
         return [response]
 ```
 
-- [ ] **Step 4: Verify GREEN and dependency boundaries**
+- [x] **Step 4: Verify GREEN and dependency boundaries**
 
 Run: `pytest tests/unit/integrations/pyrit/test_prompt_target.py tests/unit/integrations/test_pyrit_import_boundary.py -q`
 
 Expected: adapter tests and PyRIT import-boundary test pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/agentsec_eval/integrations/pyrit src/agentsec_eval/domain/models.py tests/unit/integrations
@@ -257,7 +257,7 @@ git commit -m "feat: adapt target sessions to PyRIT"
 - Produces: `AttackPolicyStopReason`, immutable turn records, and `AttackPolicyResult` with no final
   security verdict.
 
-- [ ] **Step 1: Write RED serialization and invariant tests**
+- [x] **Step 1: Write RED serialization and invariant tests**
 
 ```python
 def test_attack_policy_result_round_trips_without_security_verdict() -> None:
@@ -271,13 +271,13 @@ def test_turn_count_must_match_turn_records() -> None:
         make_policy_result(turns_executed=2, turn_records=(make_turn_record(turn=1),))
 ```
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 Run: `pytest tests/unit/integrations/pyrit/test_result.py -q`
 
 Expected: import fails because the contracts do not exist.
 
-- [ ] **Step 3: Implement strict result value types**
+- [x] **Step 3: Implement strict result value types**
 
 ```python
 class AttackPolicyStopReason(StrEnum):
@@ -305,13 +305,13 @@ class AttackPolicyResult(FrozenModel):
     raw_artifact: dict[str, JsonValue]
 ```
 
-- [ ] **Step 4: Verify GREEN**
+- [x] **Step 4: Verify GREEN**
 
 Run: `pytest tests/unit/integrations/pyrit/test_result.py -q`
 
 Expected: all result contract tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/agentsec_eval/integrations/pyrit tests/unit/integrations/pyrit/test_result.py
@@ -330,7 +330,7 @@ git commit -m "feat: define PyRIT attack policy results"
 - Produces: async `PyRITMemoryScope(run_id)` with labels, artifact snapshot, exact restore, cleanup,
   and cancellation-safe process serialization.
 
-- [ ] **Step 1: Write RED lifecycle and concurrent-caller tests**
+- [x] **Step 1: Write RED lifecycle and concurrent-caller tests**
 
 ```python
 async def run_scope(run_id: str) -> MemoryArtifact:
@@ -352,13 +352,13 @@ def test_scopes_restore_central_memory_and_isolate_concurrent_callers() -> None:
     assert second.run_ids == ("run-2",)
 ```
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 Run: `pytest tests/unit/integrations/pyrit/test_memory.py -q`
 
 Expected: import fails because the scope does not exist.
 
-- [ ] **Step 3: Implement the locked private memory scope**
+- [x] **Step 3: Implement the locked private memory scope**
 
 ```python
 class _AgentSecEvalSQLiteMemory(SQLiteMemory):
@@ -384,13 +384,13 @@ class PyRITMemoryScope:
             self._lock.release()
 ```
 
-- [ ] **Step 4: Verify GREEN, cleanup after injected errors, and repeatability**
+- [x] **Step 4: Verify GREEN, cleanup after injected errors, and repeatability**
 
 Run twice: `pytest tests/unit/integrations/pyrit/test_memory.py -q`
 
 Expected: both executions pass and CentralMemory identity is restored.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/agentsec_eval/integrations/pyrit tests/unit/integrations/pyrit/test_memory.py
@@ -410,7 +410,7 @@ git commit -m "feat: isolate PyRIT memory per policy run"
   scope, and result contracts.
 - Produces: `await PyRITAttackPolicy.run(...) -> AttackPolicyResult`.
 
-- [ ] **Step 1: Write RED tests for all stopping states and exact budget**
+- [x] **Step 1: Write RED tests for all stopping states and exact budget**
 
 ```python
 @pytest.mark.parametrize(
@@ -429,14 +429,14 @@ def test_policy_obeys_project_stopping(states, expected_turns, reason, outcome):
     assert result.pyrit_outcome == outcome
 ```
 
-- [ ] **Step 2: Verify RED against native behavior**
+- [x] **Step 2: Verify RED against native behavior**
 
 Run: `pytest tests/integration/m0c/test_policy.py -q`
 
 Expected: import failure first; when exercised against native behavior, false terminal states do not
 stop at one turn.
 
-- [ ] **Step 3: Implement the private protected loop and public policy**
+- [x] **Step 3: Implement the private protected loop and public policy**
 
 ```python
 class _ProjectControlledRedTeamingAttack(RedTeamingAttack):
@@ -482,14 +482,14 @@ class PyRITAttackPolicy:
             return build_policy_result(pyrit_result, attack.turn_records, scope)
 ```
 
-- [ ] **Step 4: Verify GREEN, Session reuse, feedback secrecy, and trace completeness**
+- [x] **Step 4: Verify GREEN, Session reuse, feedback secrecy, and trace completeness**
 
 Run: `pytest tests/integration/m0c/test_policy.py -q`
 
 Expected: all stopping cases pass; every Target call uses one Session; adversarial history contains
 policy feedback but no private canary/rationale; trace sequences and turn records are complete.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/agentsec_eval/integrations/pyrit tests/integration/m0c
@@ -507,7 +507,7 @@ git commit -m "feat: control PyRIT policy stopping"
 - Consumes: complete policy boundary and deterministic test-only final assertion.
 - Produces: acceptance evidence for errors, concurrent callers, artifacts, and truth separation.
 
-- [ ] **Step 1: Write RED integration cases**
+- [x] **Step 1: Write RED integration cases**
 
 ```python
 def test_concurrent_callers_isolate_messages_scores_evidence_and_results() -> None:
@@ -525,13 +525,13 @@ def test_pyrit_failure_is_not_final_security_truth() -> None:
     assert final.security_failure is True
 ```
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 Run: `pytest tests/integration/m0c/test_isolation.py tests/integration/m0c/test_final_truth.py -q`
 
 Expected: missing artifact/error/final-evidence behavior fails for the intended assertion.
 
-- [ ] **Step 3: Add minimal policy error classification and artifact exposure**
+- [x] **Step 3: Add minimal policy error classification and artifact exposure**
 
 ```python
 except Exception as error:
@@ -545,14 +545,14 @@ except Exception as error:
 
 Keep `FakeFinalAssertion` under `tests/integration/m0c`; no production final assertion type is added.
 
-- [ ] **Step 4: Verify GREEN and cleanup after every injected failure**
+- [x] **Step 4: Verify GREEN and cleanup after every injected failure**
 
 Run: `pytest tests/integration/m0c -q`
 
 Expected: all tests pass; each fixture reports its project Session closed; CentralMemory is restored;
 no artifact contains a peer Run.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/agentsec_eval/integrations/pyrit tests/integration/m0c
@@ -573,7 +573,7 @@ git commit -m "test: prove M0-C isolation and truth boundaries"
 - Produces: isolated `m0c-pyrit` job, current type-check scope, reproducible evidence, and bounded
   roadmap status.
 
-- [ ] **Step 1: Add the isolated CI job**
+- [x] **Step 1: Add the isolated CI job**
 
 ```yaml
 m0c-pyrit:
@@ -589,7 +589,7 @@ m0c-pyrit:
     - run: pytest tests/unit/integrations/pyrit tests/integration/m0c
 ```
 
-- [ ] **Step 2: Run full local gates**
+- [x] **Step 2: Run full local gates**
 
 ```bash
 ruff check .
@@ -603,13 +603,13 @@ git diff --check
 
 Expected: every command exits zero; the Docker suite reports 2 passed.
 
-- [ ] **Step 3: Record exact TDD and validation evidence**
+- [x] **Step 3: Record exact TDD and validation evidence**
 
 Fill the TDD document with each observed RED failure, GREEN result, refactor decision, and final
 command count. State explicitly that in-process PyRIT policies are serialized and that M0-C is a
 bounded validation, not a production backend.
 
-- [ ] **Step 4: Audit scope and protected surfaces**
+- [x] **Step 4: Audit scope and protected surfaces**
 
 Run:
 
@@ -620,7 +620,7 @@ git diff --check
 
 Expected: no `references/`, `docs/reference-assets/`, scenario pack, dataset, or M0-A Harness path.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add .github/workflows/ci.yml pyproject.toml docs/development docs/superpowers/tdd

@@ -140,9 +140,10 @@ prompts, progress decisions, and policy stopping while reusing target request/re
 events. Event IDs and sequences remain unique and strictly increasing.
 
 Each turn record contains the adversarial prompt, Target response, project turn, public score
-value and rationale, and full trusted `ProgressDecision`. The memory artifact records counts,
-conversation IDs, score IDs, AttackResult IDs, and the mandatory Run label before the backing
-database is cleared.
+value and rationale, and full trusted `ProgressDecision`. Before the backing database is cleared,
+the memory artifact captures a versioned JSON snapshot of every MessagePiece (including linked
+Scores) and AttackResult plus their counts, conversation IDs, object IDs, and mandatory Run label.
+This snapshot is trusted audit data and is never sent to the adversarial model.
 
 ## Error Handling
 
