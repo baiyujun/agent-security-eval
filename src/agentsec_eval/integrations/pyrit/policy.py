@@ -273,10 +273,15 @@ class PyRITAttackPolicy:
                     run_id=run_spec.run_id,
                     oracle=progress_oracle,
                 )
+                adversarial_target = self._adversarial_target_factory()
+                if adversarial_target._memory is not scope.memory:
+                    raise RuntimeError(
+                        "adversarial target must be created inside the active PyRITMemoryScope"
+                    )
                 attack = _ProjectControlledRedTeamingAttack(
                     objective_target=objective_target,
                     attack_adversarial_config=AttackAdversarialConfig(
-                        target=self._adversarial_target_factory(),
+                        target=adversarial_target,
                         seed_prompt=run_spec.attack_candidate.content,
                     ),
                     attack_scoring_config=AttackScoringConfig(
@@ -340,9 +345,7 @@ class PyRITAttackPolicy:
             stop_reason=stop_reason,
             final_progress_decision=attack.final_decision if attack else None,
             objective_conversation_id=attack.objective_conversation_id if attack else None,
-            adversarial_conversation_id=(
-                attack.adversarial_conversation_id if attack else None
-            ),
+            adversarial_conversation_id=(attack.adversarial_conversation_id if attack else None),
             turn_records=turn_records,
             pyrit_outcome=pyrit_outcome,
             pyrit_result_ref=(pyrit_result.attack_result_id if pyrit_result else None),

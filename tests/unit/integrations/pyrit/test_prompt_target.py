@@ -100,8 +100,7 @@ def test_prompt_target_reuses_project_session_and_preserves_lineage() -> None:
     ]
     assert all(record[2]["project_session_id"] == "session-1" for record in trace)
     assert all(
-        record[2]["objective_conversation_id"] == "objective-conversation-1"
-        for record in trace
+        record[2]["objective_conversation_id"] == "objective-conversation-1" for record in trace
     )
 
 

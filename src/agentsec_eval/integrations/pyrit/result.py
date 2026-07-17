@@ -83,9 +83,7 @@ class AttackPolicyResult(_FrozenModel):
                 raise ValueError("final progress decision must match the last turn")
         elif self.final_progress_decision is not None:
             raise ValueError("a final progress decision requires at least one turn")
-        if any(
-            record.progress_decision.run_id != self.run_id for record in self.turn_records
-        ):
+        if any(record.progress_decision.run_id != self.run_id for record in self.turn_records):
             raise ValueError("every turn decision must match the result run_id")
         if self.final_progress_decision is not None:
             self._validate_stop_reason(self.final_progress_decision)

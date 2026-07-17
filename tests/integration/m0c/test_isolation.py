@@ -78,6 +78,15 @@ def test_concurrent_callers_isolate_messages_scores_evidence_and_attack_results(
     assert first.raw_artifact["attack_result_count"] == 1
     assert second.raw_artifact["attack_result_count"] == 1
 
+    first_messages = first.raw_artifact["messages"]
+    second_messages = second.raw_artifact["messages"]
+    assert isinstance(first_messages, list)
+    assert isinstance(second_messages, list)
+    assert "response-run-1-1" in str(first_messages)
+    assert "response-run-2-1" not in str(first_messages)
+    assert "response-run-2-1" in str(second_messages)
+    assert "response-run-1-1" not in str(second_messages)
+
     first_conversations = first.raw_artifact["conversation_ids"]
     second_conversations = second.raw_artifact["conversation_ids"]
     assert isinstance(first_conversations, list)

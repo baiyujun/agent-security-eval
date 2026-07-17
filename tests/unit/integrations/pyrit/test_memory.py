@@ -73,21 +73,32 @@ def test_memory_scope_labels_snapshots_cleans_and_restores_previous_memory(
     asyncio.run(exercise())
 
     assert CentralMemory.get_memory_instance() is previous_memory
-    assert scope.artifact == {
-        "run_ids": ["run-1"],
-        "conversation_ids": ["conversation-run-1"],
-        "message_count": 1,
-        "score_count": 1,
-        "attack_result_count": 1,
-        "score_ids": scope.artifact["score_ids"],
-        "attack_result_ids": scope.artifact["attack_result_ids"],
-    }
+    assert scope.artifact["schema_version"] == 1
+    assert scope.artifact["run_ids"] == ["run-1"]
+    assert scope.artifact["conversation_ids"] == ["conversation-run-1"]
+    assert scope.artifact["message_count"] == 1
+    assert scope.artifact["score_count"] == 1
+    assert scope.artifact["attack_result_count"] == 1
     score_ids = scope.artifact["score_ids"]
     attack_result_ids = scope.artifact["attack_result_ids"]
     assert isinstance(score_ids, list)
     assert isinstance(attack_result_ids, list)
     assert len(score_ids) == 1
     assert len(attack_result_ids) == 1
+    messages = scope.artifact["messages"]
+    attack_results = scope.artifact["attack_results"]
+    assert isinstance(messages, list)
+    assert isinstance(attack_results, list)
+    assert isinstance(messages[0], dict)
+    assert isinstance(attack_results[0], dict)
+    message = messages[0]
+    scores = message["scores"]
+    assert isinstance(scores, list)
+    assert isinstance(scores[0], dict)
+    assert message["converted_value"] == "run-1-response"
+    assert message["labels"] == {"agentsec_eval.run_id": "run-1"}
+    assert scores[0]["score_metadata"] == {"run_id": "run-1"}
+    assert attack_results[0]["labels"] == {"agentsec_eval.run_id": "run-1"}
 
     async def verify_empty_next_scope() -> None:
         async with PyRITMemoryScope(run_id="run-2") as second:

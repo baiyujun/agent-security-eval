@@ -139,11 +139,7 @@ class PyRITMemoryScope:
             return
         messages = list(self._memory.get_message_pieces())
         attack_results = tuple(self._memory.get_attack_results())
-        scores_by_id = {
-            str(score.id): score
-            for piece in messages
-            for score in piece.scores
-        }
+        scores_by_id = {str(score.id): score for piece in messages for score in piece.scores}
         run_ids = {
             label
             for label in [
@@ -157,16 +153,19 @@ class PyRITMemoryScope:
             *(result.conversation_id for result in attack_results),
         }
         run_id_values = [cast(JsonValue, value) for value in sorted(run_ids)]
-        conversation_id_values = [
-            cast(JsonValue, value) for value in sorted(conversation_ids)
-        ]
+        conversation_id_values = [cast(JsonValue, value) for value in sorted(conversation_ids)]
         score_id_values = [cast(JsonValue, value) for value in sorted(scores_by_id)]
         attack_result_id_values = [
             cast(JsonValue, value)
             for value in sorted(result.attack_result_id for result in attack_results)
         ]
+        message_values = [cast(JsonValue, piece.model_dump(mode="json")) for piece in messages]
+        attack_result_values = [
+            cast(JsonValue, result.model_dump(mode="json")) for result in attack_results
+        ]
         self._attack_results = attack_results
         self._artifact = {
+            "schema_version": 1,
             "run_ids": run_id_values,
             "conversation_ids": conversation_id_values,
             "message_count": len(messages),
@@ -174,6 +173,8 @@ class PyRITMemoryScope:
             "attack_result_count": len(attack_results),
             "score_ids": score_id_values,
             "attack_result_ids": attack_result_id_values,
+            "messages": message_values,
+            "attack_results": attack_result_values,
         }
         invalid_message_labels = [
             piece.labels.get(_RUN_LABEL)

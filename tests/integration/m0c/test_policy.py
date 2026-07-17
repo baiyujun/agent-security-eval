@@ -4,6 +4,7 @@ import asyncio
 from collections.abc import Callable, Sequence
 
 import pytest
+from pyrit.memory import CentralMemory, SQLiteMemory
 
 from agentsec_eval.assertions import ProgressDecision, ProgressState
 from agentsec_eval.domain import CanonicalTraceEvent, validate_trace
@@ -137,9 +138,7 @@ def test_policy_reuses_session_and_records_complete_turn_trace() -> None:
         make_decision(ProgressState.TERMINAL_BLOCKED, turn=2),
     ]
 
-    result, session, _, _, trace = asyncio.run(
-        run_owned_policy(decisions=decisions, max_turns=3)
-    )
+    result, session, _, _, trace = asyncio.run(run_owned_policy(decisions=decisions, max_turns=3))
 
     assert {record.target_session_id for record in result.turn_records} == {session.session_id}
     assert {record.objective_conversation_id for record in result.turn_records} == {
@@ -175,9 +174,7 @@ def test_policy_forwards_only_sanitized_feedback_to_adversarial_target() -> None
         make_decision(ProgressState.TERMINAL_BLOCKED, turn=2),
     ]
 
-    result, _, _, factory, _ = asyncio.run(
-        run_owned_policy(decisions=decisions, max_turns=3)
-    )
+    result, _, _, factory, _ = asyncio.run(run_owned_policy(decisions=decisions, max_turns=3))
 
     adversarial_requests = factory.instances[0].received_requests
     assert len(adversarial_requests) == 2
@@ -225,3 +222,36 @@ def test_policy_classifies_adversarial_errors_and_preserves_cleanup() -> None:
     assert session.closed is True
     assert oracle.calls == []
     assert trace[-1].payload["stop_reason"] == "policy_error"
+
+
+def test_policy_rejects_adversarial_target_prebuilt_against_foreign_memory() -> None:
+    class _ForeignMemory(SQLiteMemory):
+        pass
+
+    previous = CentralMemory._memory_instance
+    foreign_memory = _ForeignMemory(db_path=":memory:", silent=True)
+    foreign_memory.reset_database()
+    CentralMemory.set_memory_instance(foreign_memory)
+    prebuilt_target = AdversarialTargetFactory(run_id="run-1")()
+    CentralMemory._memory_instance = previous
+
+    session = RecordingTargetSession(run_id="run-1")
+    policy = PyRITAttackPolicy(adversarial_target_factory=lambda: prebuilt_target)
+    try:
+        result = asyncio.run(
+            policy.run(
+                run_spec=make_run_spec(max_turns=1),
+                target_session=session,
+                progress_oracle=SequenceOracle([make_decision(ProgressState.TERMINAL_BLOCKED)]),
+                trace_sink=[],
+            )
+        )
+    finally:
+        asyncio.run(session.close())
+        foreign_memory.reset_database()
+        CentralMemory._memory_instance = previous
+
+    assert result.stop_reason is AttackPolicyStopReason.POLICY_ERROR
+    assert result.turns_executed == 0
+    assert result.error_message is not None
+    assert "created inside the active PyRITMemoryScope" in result.error_message

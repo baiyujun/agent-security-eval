@@ -205,9 +205,7 @@ def test_target_results_reject_blank_identifiers(
 
 
 def test_target_adapter_rejects_unknown_and_blank_open_session_fields() -> None:
-    extra_transport = RecordingTransport(
-        [{"session_id": "session-001", "unexpected": True}]
-    )
+    extra_transport = RecordingTransport([{"session_id": "session-001", "unexpected": True}])
     blank_transport = RecordingTransport([{"session_id": " "}])
 
     with pytest.raises(ValidationError, match="extra_forbidden"):
