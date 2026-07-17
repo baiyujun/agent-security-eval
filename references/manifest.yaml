@@ -200,3 +200,80 @@ references:
       - Independently MIT subdirectories still require a file and asset provenance audit.
       - No independent Apache-2.0 subtree was found at the fixed commit.
     copied_files: []
+
+  - name: SABER
+    source_lock: references/source-locks/ac-reference-sources.yaml#sources.saber
+    classification_status: verified-at-fixed-commit-with-license-block
+    reuse_candidates:
+      - capability: A-class scenario taxonomy, attack-channel placement, and oracle intent
+        classification: DESIGN_REFERENCE
+      - capability: raw task records, fixture content, payloads, and command regexes
+        classification: REJECT
+    role: A-class Repo/Shell scenario, fixture, attack-channel, and oracle-intent source
+    first_version_decision: semantic reconstruction only; reject raw task data until the conflicting data-license statements are resolved
+
+  - name: Inspect Evals / CodeIPI
+    source_lock: references/source-locks/ac-reference-sources.yaml#sources.inspect-evals-codeipi
+    classification_status: verified-at-fixed-commit-with-license-block
+    reuse_candidates:
+      - capability: sample identity, injection-vector metadata, fixture path manifest, and verifier intent
+        classification: DESIGN_REFERENCE
+      - capability: raw sample prose, embedded repository fixtures, static canaries, and source scorer
+        classification: REJECT
+    role: A-class coding-agent indirect prompt-injection sample and scorer reference
+    first_version_decision: reconstruct compact synthetic repository cases; reject raw records until an independent data license is established
+
+  - name: Terminal-Bench 2
+    source_lock: references/source-locks/ac-reference-sources.yaml#sources.terminal-bench-2
+    classification_status: verified-at-fixed-commit-with-license-block
+    reuse_candidates:
+      - capability: Harbor-native task roles, resource configuration, and utility-verifier intent
+        classification: DESIGN_REFERENCE
+      - capability: raw instructions, environments, private tests, generated fixtures, and solutions
+        classification: REJECT
+    role: A-class native terminal environment, normal task, and verifier source
+    first_version_decision: use the official fixed commit as design evidence only; reconstruct two small native drafts and keep raw assets blocked pending rights and image review
+
+  - name: Harbor
+    source_lock: references/source-locks/ac-reference-sources.yaml#sources.harbor
+    classification_status: verified-at-fixed-commit
+    reuse_candidates:
+      - capability: native task-directory roles, resource schema, and reward-file semantics
+        classification: DESIGN_REFERENCE
+      - capability: mapper, job, trial, environment, verifier, and orchestration runtime
+        classification: REJECT
+    role: Terminal-Bench-to-native-task mapping and verifier-semantics reference
+    first_version_decision: borrow directory-role and reward semantics; reject the mapper and nested runtime
+
+  - name: MCP-SafetyBench
+    source_lock: references/source-locks/ac-reference-sources.yaml#sources.mcp-safetybench
+    classification_status: verified-at-fixed-commit-with-license-block
+    reuse_candidates:
+      - capability: tool-poisoning and rug-pull transition semantics
+        classification: DESIGN_REFERENCE
+      - capability: raw attack tasks, implementation code, runner, evaluator labels, and live-service setup
+        classification: REJECT
+    role: C-class MCP attack schema, transition, evaluator, and cleanup reference
+    first_version_decision: reconstruct deterministic local patterns only; import no source task, code, credential, URL, evaluator, or cleanup implementation
+
+  - name: MCP-Universe
+    source_lock: references/source-locks/ac-reference-sources.yaml#sources.mcp-universe
+    classification_status: verified-at-fixed-commit
+    reuse_candidates:
+      - capability: fork provenance plus baseline task, trace, evaluator, and cleanup concepts
+        classification: DESIGN_REFERENCE
+      - capability: live-service tasks, credentials, preparers, runtime, and service cleanup
+        classification: REJECT
+    role: MCP-SafetyBench fork provenance and baseline task, evaluator, trace, and cleanup reference
+    first_version_decision: provenance and lifecycle design reference only; no runtime or live-service asset reuse
+
+  - name: MCPSecBench
+    source_lock: references/source-locks/ac-reference-sources.yaml#sources.mcpsecbench
+    classification_status: verified-at-fixed-commit-with-data-license-block
+    reuse_candidates:
+      - capability: malicious-server-addition taxonomy and server-selection intent
+        classification: DESIGN_REFERENCE
+      - capability: scripts, experimental data, GUI automation, screenshots, desktop configuration, and network PoCs
+        classification: REJECT
+    role: C-class attack taxonomy and malicious-server seed reference
+    first_version_decision: taxonomy-only design reference; reconstruct one deterministic local server-addition pattern from scratch
