@@ -653,7 +653,7 @@ git commit -m "ci: validate M0-C PyRIT policy embedding"
 - Produces: `PyRITAttackPolicy.run(..., attack_objective: str, ...)`, strict score ownership checks,
   and M0-B/M0-C CI jobs whose test selectors do not overlap accidentally.
 
-- [ ] **Step 1: Write and run the failing attack-objective integration test**
+- [x] **Step 1: Write and run the failing attack-objective integration test**
 
 ```python
 def test_policy_uses_attack_objective_instead_of_user_task_or_seed() -> None:
@@ -680,7 +680,7 @@ Run: `/tmp/agentsec-m0b-venv/bin/pytest tests/integration/m0c/test_policy.py -q`
 Expected RED: `PyRITAttackPolicy.run()` rejects the new `attack_objective` keyword, proving the
 public Policy boundary does not yet carry the required semantic input.
 
-- [ ] **Step 2: Add the minimal explicit Policy input and rerun the integration test**
+- [x] **Step 2: Add the minimal explicit Policy input and rerun the integration test**
 
 ```python
 async def run(
@@ -711,7 +711,7 @@ Run: `/tmp/agentsec-m0b-venv/bin/pytest tests/integration/m0c/test_policy.py -q`
 Expected GREEN: every policy integration test passes and the persisted adversarial system prompt
 contains the explicit attack objective rather than the normal user task or attack seed.
 
-- [ ] **Step 3: Write RED score-ownership cases, tighten validation, and verify GREEN**
+- [x] **Step 3: Write RED score-ownership cases, tighten validation, and verify GREEN**
 
 ```python
 @pytest.mark.parametrize("score_metadata", [None, {}, {"run_id": "run-2"}])
@@ -734,10 +734,10 @@ Run: `/tmp/agentsec-m0b-venv/bin/pytest tests/unit/integrations/pyrit/test_memor
 Expected RED before the production change: missing metadata is accepted. Expected GREEN after the
 change: missing, empty, and foreign score metadata are rejected and cleanup still restores memory.
 
-- [ ] **Step 4: Make CI selectors exact and update evidence documents**
+- [x] **Step 4: Make CI selectors exact and update evidence documents**
 
 Set `m0b-pyrit` to `test_scorer.py`, `tests/integration/m0b`, and the import-boundary test. Set
-`m0c-pyrit` to the five explicit PyRIT unit files, `tests/integration/m0c`, and the same import
+`m0c-pyrit` to the four explicit PyRIT unit files, `tests/integration/m0c`, and the same import
 boundary test. Update the validation report with the three-way input distinction and update the
 Roadmap status to `validated locally and on Draft PR #8 CI on 2026-07-17`.
 
@@ -750,7 +750,7 @@ git diff --check
 
 Expected: both commands exit zero.
 
-- [ ] **Step 5: Run the full M0-C acceptance gates and commit**
+- [x] **Step 5: Run the full M0-C acceptance gates and commit**
 
 ```bash
 /tmp/agentsec-m0b-venv/bin/ruff check .

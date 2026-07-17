@@ -5,7 +5,7 @@
 M0-C validates one project-controlled PyRIT `0.14.0` Attack Policy inside one Run:
 
 ```text
-open TargetSession
+ExecutionRunSpec + explicit attack_objective + open TargetSession
 -> TargetSessionPromptTarget
 -> project-controlled RedTeamingAttack._perform_async
 -> AssertionBackedPyRITScorer
@@ -21,7 +21,9 @@ parallel PyRIT policy backend.
 - `TargetSessionPromptTarget` adapts exactly one already-open project `TargetSession` to PyRIT's
   final public `PromptTarget.send_prompt_async()` path. It neither opens nor closes a Target.
 - `PyRITAttackPolicy` constructs the PyRIT adversarial strategy and owns the single-Run stopping
-  policy. It uses `ExecutionBudget.max_turns` directly and does not instantiate `AttackExecutor`.
+  policy. Its required, non-blank `attack_objective` input is distinct from both the benign
+  `ExecutionScenarioSpec.user_task` and the concrete `AttackCandidate.content` seed. It uses
+  `ExecutionBudget.max_turns` directly and does not instantiate `AttackExecutor`.
 - `AttackPolicyResult` is an immutable non-authoritative policy artifact. It contains no
   `security_failure` field.
 - `PyRITMemoryScope` labels every PyRIT artifact with `agentsec_eval.run_id`, serializes the
@@ -74,6 +76,8 @@ The M0-C test suite uses real PyRIT Strategy, PromptTarget, PromptNormalizer, `S
 targets. It proves:
 
 - all turns reuse the same project Session;
+- the benign user task, attacker objective, and concrete attack seed remain distinct, and PyRIT's
+  adversarial system prompt uses the explicit attacker objective;
 - objective success, terminal block, invalid Run, and exact budget semantics;
 - sanitized `policy_feedback` reaches the adversarial target while private rationale does not;
 - complete immutable turn records and Canonical Trace events;
@@ -97,10 +101,11 @@ git diff --check
 ```
 
 The CI workflow adds `m0c-pyrit` with `.[dev,pyrit]`, a strict `pyrit==0.14.0` version assertion,
-explicit PyRIT/M0-C MyPy inputs, and focused unit/integration tests. `quality`, `m0a-docker`, and
-`m0b-pyrit` stay independent.
+explicit PyRIT/M0-C MyPy inputs, and focused unit/integration tests. `m0b-pyrit` selects only the
+M0-B scorer and integration tests; M0-C unit or integration failures therefore do not pollute the
+M0-B gate. `quality` and `m0a-docker` remain independent as well.
 
-The final local run on 2026-07-17 reported 54 core tests passed, 48 PyRIT/M0-B/M0-C tests passed,
+The final local run on 2026-07-17 reported 54 core tests passed, 53 PyRIT/M0-B/M0-C tests passed,
 and 2 M0-A Docker tests passed. Ruff, format checking, global MyPy, workflow YAML parsing, and
 `git diff --check` also passed.
 

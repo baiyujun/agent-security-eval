@@ -220,3 +220,42 @@ def test_memory_scope_rejects_unlabeled_or_foreign_data_and_still_cleans(
         asyncio.run(add_foreign_message())
 
     assert CentralMemory.get_memory_instance() is previous_memory
+
+
+@pytest.mark.parametrize(
+    "score_metadata",
+    [None, {}, {"run_id": "run-2"}],
+    ids=["missing-metadata", "missing-run-id", "foreign-run-id"],
+)
+def test_memory_scope_rejects_scores_without_current_run_id(
+    previous_memory: SQLiteMemory,
+    score_metadata: dict[str, str | int | float] | None,
+) -> None:
+    scope = PyRITMemoryScope(run_id="run-1")
+
+    async def add_invalid_score() -> None:
+        async with scope:
+            piece = MessagePiece(
+                role="assistant",
+                original_value="untrusted score",
+                conversation_id="conversation-run-1",
+            )
+            piece.labels = scope.labels
+            scope.memory.add_message_to_memory(request=piece.to_message())
+            scope.memory.add_scores_to_memory(
+                scores=[
+                    Score(
+                        score_value="false",
+                        score_type="true_false",
+                        score_category=["agent_security_eval"],
+                        score_rationale="sanitized feedback",
+                        score_metadata=score_metadata,
+                        message_piece_id=piece.id,
+                    )
+                ]
+            )
+
+    with pytest.raises(RuntimeError, match="foreign or missing Run labels"):
+        asyncio.run(add_invalid_score())
+
+    assert CentralMemory.get_memory_instance() is previous_memory

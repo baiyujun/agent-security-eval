@@ -187,10 +187,9 @@ class PyRITMemoryScope:
             if result.labels.get(_RUN_LABEL) != self._run_id
         ]
         invalid_score_labels = [
-            score.score_metadata.get("run_id")
+            score.score_metadata.get("run_id") if score.score_metadata else None
             for score in scores_by_id.values()
-            if score.score_metadata
-            and score.score_metadata.get("run_id") not in {None, self._run_id}
+            if not score.score_metadata or score.score_metadata.get("run_id") != self._run_id
         ]
         if invalid_message_labels or invalid_result_labels or invalid_score_labels:
             raise RuntimeError("PyRIT memory contains foreign or missing Run labels")

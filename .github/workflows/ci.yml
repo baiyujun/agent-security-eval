@@ -88,7 +88,7 @@ jobs:
       - name: Pytest (M0-B)
         run: |
           pytest \
-            tests/unit/integrations/pyrit \
+            tests/unit/integrations/pyrit/test_scorer.py \
             tests/integration/m0b \
             tests/unit/integrations/test_pyrit_import_boundary.py
 
@@ -132,6 +132,9 @@ jobs:
       - name: Pytest (M0-C)
         run: |
           pytest \
-            tests/unit/integrations/pyrit \
+            tests/unit/integrations/pyrit/test_scorer.py \
+            tests/unit/integrations/pyrit/test_prompt_target.py \
+            tests/unit/integrations/pyrit/test_result.py \
+            tests/unit/integrations/pyrit/test_memory.py \
             tests/integration/m0c \
             tests/unit/integrations/test_pyrit_import_boundary.py

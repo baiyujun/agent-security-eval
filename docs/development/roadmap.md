@@ -30,7 +30,7 @@ Strategy, policy stopping, PromptTarget, or Final Assertion Engine. See
 
 ## M0-C: PyRIT Attack Policy embedding validation
 
-**Status: validated locally on 2026-07-17; pending dedicated PR CI.**
+**Status: validated locally and on Draft PR #8 CI on 2026-07-17.**
 
 One project-owned policy now uses the pinned PyRIT `0.14.0` red-teaming lifecycle inside a single
 Run while retaining project control of terminal states and turn budget. It adapts one already-open

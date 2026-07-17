@@ -233,7 +233,7 @@ class _ProjectControlledRedTeamingAttack(RedTeamingAttack):
 
 
 class PyRITAttackPolicy:
-    """Execute one project-controlled PyRIT policy inside one Run memory scope."""
+    """Execute one Run with an explicit attacker objective distinct from task and seed."""
 
     def __init__(
         self,
@@ -246,10 +246,14 @@ class PyRITAttackPolicy:
         self,
         *,
         run_spec: ExecutionRunSpec,
+        attack_objective: str,
         target_session: TargetSession,
         progress_oracle: ProgressOracle,
         trace_sink: MutableSequence[CanonicalTraceEvent],
     ) -> AttackPolicyResult:
+        normalized_attack_objective = attack_objective.strip()
+        if not normalized_attack_objective:
+            raise ValueError("attack_objective must not be blank")
         trace = _CanonicalTraceEmitter(run_id=run_spec.run_id, sink=trace_sink)
         scope = PyRITMemoryScope(run_id=run_spec.run_id)
         attack: _ProjectControlledRedTeamingAttack | None = None
@@ -292,7 +296,7 @@ class PyRITAttackPolicy:
                     trace_emitter=trace,
                 )
                 pyrit_result = await attack.execute_async(
-                    objective=run_spec.scenario.user_task,
+                    objective=normalized_attack_objective,
                     memory_labels=scope.labels,
                 )
                 stop_reason = attack.policy_stop_reason
