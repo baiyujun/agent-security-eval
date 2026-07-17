@@ -1,5 +1,6 @@
 """PyRIT integration backed by project-owned runtime contracts."""
 
+from agentsec_eval.integrations.pyrit.memory import PyRITMemoryScope
 from agentsec_eval.integrations.pyrit.prompt_target import TargetSessionPromptTarget
 from agentsec_eval.integrations.pyrit.result import (
     AttackPolicyResult,
@@ -13,5 +14,6 @@ __all__ = [
     "AttackPolicyResult",
     "AttackPolicyStopReason",
     "AttackPolicyTurnRecord",
+    "PyRITMemoryScope",
     "TargetSessionPromptTarget",
 ]
