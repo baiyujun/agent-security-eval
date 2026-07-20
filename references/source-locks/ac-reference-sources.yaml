@@ -1,5 +1,14 @@
 source_lock_version: 1
 audit_date: "2026-07-16"
+catalog_source_order:
+  - saber
+  - inspect-evals-codeipi
+  - terminal-bench-2
+  - mcp-safetybench
+  - mcpsecbench
+  - promptfoo
+  - harbor
+  - mcp-universe
 
 sources:
   saber:

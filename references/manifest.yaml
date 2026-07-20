@@ -2,6 +2,7 @@
 references:
   - name: promptfoo
     repository: https://github.com/promptfoo/promptfoo
+    local_checkout: ../reference-sources/promptfoo-locked-fcde2e89
     default_branch: main
     commit: fcde2e89a89dc4ca79dcc3012927f50193251759
     latest_stable_release: "0.121.19"

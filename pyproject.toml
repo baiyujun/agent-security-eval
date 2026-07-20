@@ -14,6 +14,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+catalog = [
+  "PyYAML==6.0.3",
+]
 pyrit = [
   "pyrit==0.14.0",
 ]
@@ -23,6 +26,7 @@ dev = [
   "pytest-cov>=5.0",
   "pytest-timeout>=2.3",
   "ruff>=0.5",
+  "types-PyYAML==6.0.12.20260518",
 ]
 
 [tool.hatch.build.targets.wheel]
