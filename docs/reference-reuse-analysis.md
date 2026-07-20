@@ -390,7 +390,7 @@ until legal counsel or the rights holder says otherwise.
 `05322696a0f784ec399ef6abbafd3d2a250ea9cc`), separately from the source-audit commit:
 
 ```bash
-/root/HJY/.venv-inspect/bin/python experiments/inspect-execution-model/spike.py
+python experiments/inspect-execution-model/spike.py
 ```
 
 ```json

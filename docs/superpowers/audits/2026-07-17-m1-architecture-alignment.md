@@ -6,6 +6,49 @@
 > evidence, current architecture documents, current execution contracts, and the selected
 > Offline Import / Native Runtime decision.
 
+> Lifecycle note: this audit records the pre-remediation planning state observed on 2026-07-17.
+> References to PR #5 being open or to planned publication describe that baseline, not the current
+> lifecycle state. ADR-0002 and v1.1 remain `Proposed`; v1.1 becomes canonical only after explicit
+> architecture acceptance, both lifecycle transitions, and merge.
+
+## Historical v1.0 Evidence Record
+
+The full historical source is intentionally not copied into this repository. All v1.0 line
+references in this audit are anchored to this exact evidence record:
+
+- File name: `Agent安全评测_场景与数据资产建设方案_v1.0.md`
+- SHA-256: `18745113f2549e897c14e3bcac1cbc4b6521b6157e496bf60348c1c5183c6ec0`
+- Source: user-provided planning artifact supplied for the M1 architecture-alignment review
+- Repository status: external historical input; superseded only after the proposed v1.1 candidate
+  is explicitly accepted and merged
+
+Key excerpts that establish the conflicting runtime route are preserved here for independent
+review:
+
+```yaml
+import_mode:
+  - executable_adapter
+  - scenario_template
+  - attack_seed
+  - normal_task_fixture
+  - taxonomy_only
+```
+
+```text
+S1：两个外部 Adapter Spike
+1. SaberExternalBenchmarkAdapter
+2. InspectEvalsExternalBenchmarkAdapter
+```
+
+```text
+外部 Benchmark 与真实事件
+→ 来源登记和版本锁定
+→ Adapter 复现与 Oracle Audit
+→ BaseScenario 归并
+→ 固定 ScenarioCase 构建
+→ 原生场景包
+```
+
 ## Internal Documentation Audit
 
 ### Verdict
@@ -14,7 +57,7 @@
 - **Main issue**: the v1.0 scenario plan assigns long-lived execution responsibility to external
   Benchmark adapters while Draft ADR-0002 assigns all production execution to the project runtime.
 - **Scope reviewed**:
-  - `/root/HJY/Agent安全评测_场景与数据资产建设方案_v1.0.md`
+  - historical v1.0 evidence record above
   - `origin/codex/reference-audit:docs/adr/0002-offline-import-native-runtime.md`
   - `origin/codex/reference-audit:docs/development/importer-spike-plan.md`
   - `docs/architecture/reference-informed-options.md`
@@ -53,10 +96,12 @@
 #### P1: ADR lifecycle status contradicts GitHub state
 
 - **Type**: lifecycle conflict.
-- **Location**: Draft ADR-0002 line 3; PR #5 is Draft, open, and conflicting.
+- **Location**: Draft ADR-0002 line 3; at the recorded baseline, PR #5 was Draft, open, and
+  conflicting.
 - **Evidence**:
   - The file says `Status: Accepted`.
-  - GitHub PR #5 has not been reviewed or merged into `main`.
+  - At the recorded baseline, GitHub PR #5 had not been reviewed or merged into `main`. It is now
+    closed and unmerged, superseded by PR #11.
 - **Impact**: readers may treat an unmerged proposal as repository policy.
 - **Repair**: update.
 - **Recommendation**: migrate the ADR as `Proposed`; change it to `Accepted` only in the reviewed
@@ -115,7 +160,8 @@
 ### Suggested Repair Order
 
 1. Migrate ADR-0002 as `Proposed` on latest main.
-2. Publish the canonical v1.1 with split reuse metadata and native compilation boundary.
+2. Publish the proposed v1.1 candidate, intended to become canonical after review and merge, with
+   split reuse metadata and a native compilation boundary.
 3. Reconcile PR #5 audit/spike facts with PR #6 source locks.
 4. Narrow ClawSentry and AgentDojo language in current reference docs.
 5. Open replacement PR, then close PR #5 as superseded.
@@ -294,7 +340,7 @@ checker but not from operators or reviewers.
 | Option | Boundary clarity | Current fit | Migration cost | Risk | Decision |
 | --- | --- | --- | --- | --- | --- |
 | Patch v1.0 while retaining external runtime adapters | Low | Fast locally | Medium ongoing | Multiple lifecycle/truth owners | Reject |
-| ADR + canonical v1.1 + offline import and isolated replay | High | Matches code and PR #6 | Low before implementation | Importer work is explicit | Recommend |
+| ADR + proposed v1.1 candidate + offline import and isolated replay | High | Matches code and PR #6 | Low before implementation | Importer work is explicit | Recommend after review |
 | Reference-only, no imports | Very high | Too narrow for executable assets | Low | Cannot build native packs | Fallback when rights/semantics fail |
 
 ### Findings
@@ -351,7 +397,8 @@ checker but not from operators or reviewers.
 
 ### Next Step
 
-Publish ADR-0002 as `Proposed`, then derive canonical v1.1 from the selected boundary before M1-A.
+Publish ADR-0002 and the v1.1 candidate as `Proposed`, then require explicit review before changing
+both statuses to `Accepted`, activating canonical wording, or starting M1-A.
 
 ## SourceAssetReuseMetadata Data Model Audit
 
@@ -553,7 +600,7 @@ Target path: `docs/architecture/scenario-data-assets-v1.1.md`
 | # | Old block | Verdict | Check passed / failed |
 | ---: | --- | --- | --- |
 | 1 | Title and companion-document purpose | Keep | Still describes the scenario/data-assets planning surface (anchor 1). |
-| 2 | v1.0 version/date frame | Delete | Superseded by canonical v1.1 and current 2026-07-17 baseline. |
+| 2 | v1.0 version/date frame | Delete | Replacement coverage is in the proposed v1.1 candidate; canonical activation remains pending review and merge. |
 | 3 | Core conclusion using generic Adapter | Delete | Fails anchors 1-3; replacement comes from the selected native route. |
 | 4 | Section 1 goals/questions | Keep | Questions remain valid and do not prescribe runtime ownership. |
 | 5 | Section 1 asset tree: coverage, scenarios, fixtures, oracles, lineage, provenance, regression | Keep | Each has a current owner/evidence need. |
