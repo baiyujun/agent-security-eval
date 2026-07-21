@@ -1,5 +1,25 @@
 """Project-owned assertion and progress contracts."""
 
+from agentsec_eval.assertions.final import (
+    AssertionApplicability,
+    AssessmentOrigin,
+    FinalAssertionPlan,
+    OutcomeSignal,
+    ReplayComparison,
+    ReplaySnapshot,
+    RunOutcome,
+    SignalAssessment,
+    SignalState,
+    TraceAssertionResult,
+    TraceAssertionRule,
+    TraceEvidenceEnvelope,
+    TracePredicate,
+    compare_replays,
+    evaluate_final_outcome,
+    normalized_trace_digest,
+    outcome_digest,
+    tool_effect_trace_digest,
+)
 from agentsec_eval.assertions.progress import (
     AttackStage,
     ProgressDecision,
@@ -7,4 +27,27 @@ from agentsec_eval.assertions.progress import (
     ProgressState,
 )
 
-__all__ = ["AttackStage", "ProgressDecision", "ProgressOracle", "ProgressState"]
+__all__ = [
+    "AssessmentOrigin",
+    "AssertionApplicability",
+    "AttackStage",
+    "FinalAssertionPlan",
+    "OutcomeSignal",
+    "ProgressDecision",
+    "ProgressOracle",
+    "ProgressState",
+    "ReplayComparison",
+    "ReplaySnapshot",
+    "RunOutcome",
+    "SignalAssessment",
+    "SignalState",
+    "TraceAssertionResult",
+    "TraceAssertionRule",
+    "TraceEvidenceEnvelope",
+    "TracePredicate",
+    "compare_replays",
+    "evaluate_final_outcome",
+    "normalized_trace_digest",
+    "outcome_digest",
+    "tool_effect_trace_digest",
+]
