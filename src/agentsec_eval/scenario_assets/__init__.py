@@ -67,6 +67,11 @@ from agentsec_eval.scenario_assets.models import (
     SourceProvenance,
     StrictText,
 )
+from agentsec_eval.scenario_assets.representatives import (
+    CodeIPIRepresentativeImporter,
+    SaberRepresentativeImporter,
+    make_representative_request,
+)
 from agentsec_eval.scenario_assets.validation import (
     pack_content_digest,
     validate_pack,
@@ -92,6 +97,7 @@ __all__ = [
     "ConversionConfig",
     "ConversionLoss",
     "ConversionLossKind",
+    "CodeIPIRepresentativeImporter",
     "EntryPoint",
     "EnvironmentDefinition",
     "EnvironmentRole",
@@ -124,6 +130,7 @@ __all__ = [
     "ScenarioVariant",
     "Sha256Digest",
     "SourceProvenance",
+    "SaberRepresentativeImporter",
     "StrictText",
     "Visibility",
     "ImportResult",
@@ -136,4 +143,5 @@ __all__ = [
     "with_computed_digest",
     "compile_case",
     "compiled_input_digest",
+    "make_representative_request",
 ]
