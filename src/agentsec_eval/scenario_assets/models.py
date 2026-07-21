@@ -147,8 +147,11 @@ class FieldLineage(FrozenModel):
     lineage_id: AssetId
     output_component_id: AssetId
     output_field: StrictText
+    source_path: RelativePosixPath
     source_fields: tuple[StrictText, ...]
     transformation: LineageTransformation
+    project_authored_extension: bool
+    omission: StrictText | None
     provenance_ids: tuple[AssetId, ...]
     notes: StrictText
 
@@ -163,6 +166,7 @@ class FieldLineage(FrozenModel):
 
 class ConversionLoss(FrozenModel):
     loss_id: AssetId
+    source_path: RelativePosixPath
     source_fields: tuple[StrictText, ...]
     kind: ConversionLossKind
     handling: StrictText

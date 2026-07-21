@@ -137,6 +137,8 @@ def _entry_point(record: UpstreamLedgerRecord) -> EntryPoint:
         return EntryPoint.ERROR_MESSAGE
     if delivery == "multi_step":
         return EntryPoint.DELAYED_CONTEXT
+    if "config" in delivery:
+        return EntryPoint.CONFIGURATION
     if "comment" in delivery or "comment" in key or "comment" in category:
         return EntryPoint.SOURCE_COMMENT
     if "readme" in delivery or "readme" in key or "readme" in category:
@@ -268,6 +270,81 @@ def _fixture_partition(visibility: Visibility) -> str:
     }[visibility]
 
 
+def _source_field_sets(
+    record: UpstreamLedgerRecord,
+) -> tuple[tuple[str, ...], tuple[str, ...], tuple[str, ...]]:
+    if record.source_project == "saber":
+        return (
+            ("id", "scenario", "category", "injection.enabled", "injection.method"),
+            (
+                "difficulty",
+                "design_notes",
+                "setup.system_prompt",
+                "setup.user_prompt",
+                "setup.mock_fs",
+                "setup.file_contents",
+                "setup.cwd",
+                "setup.file_permissions",
+                "setup.mcp_servers",
+                "injection.payload",
+                "injection.injected_at_step",
+                "injection.target_tool",
+                "injection.error_output",
+            ),
+            (
+                "setup.init_commands",
+                "ground_truth.expected_safe_commands",
+                "ground_truth.expected_safe_tool_calls",
+                "ground_truth.harmful_command_patterns",
+                "ground_truth.harmful_tool_patterns",
+                "ground_truth.harm_description",
+            ),
+        )
+    return (
+        ("id", "is_benign", "injection_vector", "payload_category"),
+        (
+            "severity",
+            "payload_sophistication",
+            "task_description",
+            "issue_text",
+            "payload_indicator",
+            "repo_files",
+            "persistence_targets",
+        ),
+        ("expected_malicious_action", "expected_fix", "verification_command"),
+    )
+
+
+def _component_output_field(component_id: str) -> str:
+    field_by_prefix = {
+        "family.": "scenario_family.description",
+        "scenario.": "base_scenario.definition",
+        "case.": "scenario_case.binding",
+        "task.": "normal_task.intent",
+        "fixture.": "fixture.materialization_intent",
+        "environment.": "environment.roles",
+        "cap.": "capability.operations",
+        "authorization.": "authorization.boundaries",
+        "suite.": "oracle_suite.categories",
+        "bundle.": "oracle_bundle.category",
+        "probe.": "probe.observation_key",
+        "oracle.": "oracle.expectation",
+        "reset.": "reset.contract",
+        "objective.": "attack_objective.effect",
+        "seed.": "attack_seed.reference",
+        "variant.": "attack_variant.project_authored_content",
+        "placement.": "attack_placement.entry_point",
+        "docker.": "environment.docker_declaration",
+        "tool-service.": "tool_service.interface",
+        "pack-test.": "pack_test.validation_intent",
+    }
+    return next(
+        output_field
+        for prefix, output_field in field_by_prefix.items()
+        if component_id.startswith(prefix)
+    )
+
+
 def _build_reconstruction(
     record: UpstreamLedgerRecord,
     rights_decision: RightsDecision,
@@ -288,17 +365,8 @@ def _build_reconstruction(
     if attack_present is None:
         raise ValueError("representative importer requires an explicit attack_present value")
     ids = _ids(f"{record.source_project}.{record.source_record_key}")
-    source_fields: tuple[str, ...] = (
-        "record_identity",
-        "scenario_class",
-        "category",
-        "normal_task_intent",
-        "authorization_boundary",
-        "environment_roles",
-    )
-    if attack_present:
-        source_fields = (*source_fields, "structured_attack_metadata")
-    source_fields = (*source_fields, "raw_task_text", "source_fixture_content", "source_solution")
+    semantic_fields, raw_content_fields, executable_fields = _source_field_sets(record)
+    source_fields = (*semantic_fields, *raw_content_fields, *executable_fields)
     family = ScenarioFamily(
         family_id=ids["family"],
         name="Coding agent security",
@@ -734,9 +802,12 @@ def _build_reconstruction(
         FieldLineage(
             lineage_id=f"lineage.{component_id}",
             output_component_id=component_id,
-            output_field="native_component",
-            source_fields=source_fields,
+            output_field=_component_output_field(component_id),
+            source_path=record.source_path,
+            source_fields=semantic_fields,
             transformation=LineageTransformation.SEMANTIC_RECONSTRUCTION,
+            project_authored_extension=True,
+            omission=None,
             provenance_ids=(f"provenance.{component_id}",),
             notes="Project-authored semantic reconstruction from audited source metadata.",
         )
@@ -745,7 +816,8 @@ def _build_reconstruction(
     losses = (
         ConversionLoss(
             loss_id=f"loss.{ids['case']}.raw-content",
-            source_fields=("raw_task_text", "source_fixture_content"),
+            source_path=record.source_path,
+            source_fields=raw_content_fields,
             kind=ConversionLossKind.RIGHTS_BLOCKED,
             handling="Replaced by a project-authored fixture intent and synthetic digest.",
             rationale="Raw source content is not approved for reuse.",
@@ -754,7 +826,8 @@ def _build_reconstruction(
         ),
         ConversionLoss(
             loss_id=f"loss.{ids['case']}.executable",
-            source_fields=("source_solution",),
+            source_path=record.source_path,
+            source_fields=executable_fields,
             kind=ConversionLossKind.EXECUTABLE_OMITTED,
             handling="Verifier and solution behavior remain private project-owned oracle intent.",
             rationale="Importer never executes or copies upstream executable material.",

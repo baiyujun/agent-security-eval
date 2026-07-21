@@ -530,6 +530,7 @@ def make_complete_pack(output_digest: str = SHA) -> NativeScenarioPack:
     )
     loss = ConversionLoss(
         loss_id="loss.raw-task",
+        source_path="tasks/A/info_leak/A_info_001.json",
         source_fields=("task", "ground_truth"),
         kind=ConversionLossKind.RIGHTS_BLOCKED,
         handling="Project-authored intent replaces restricted source text.",
@@ -573,8 +574,11 @@ def make_complete_pack(output_digest: str = SHA) -> NativeScenarioPack:
             lineage_id=f"lineage.{component_id}",
             output_component_id=component_id,
             output_field="component",
+            source_path="tasks/A/info_leak/A_info_001.json",
             source_fields=("scenario", "structured_metadata"),
             transformation=LineageTransformation.SEMANTIC_RECONSTRUCTION,
+            project_authored_extension=True,
+            omission=None,
             provenance_ids=("prov-1",),
             notes="Project-authored component derived from source structure only.",
         )

@@ -104,6 +104,16 @@ def test_batch_import_emits_complete_candidate_records_for_all_scenarios() -> No
     assert all(item.field_lineage and item.conversion_losses for item in result.records)
     assert all(item.record_role is RecordRole.BENCHMARK_SCENARIO for item in result.records)
     assert all(item.source_asset_kind is SourceAssetKind.SABER_TASK for item in result.records)
+    for imported in result.imports:
+        assert all(lineage.output_field != "native_component" for lineage in imported.field_lineage)
+        assert all(lineage.source_path.startswith("tasks/") for lineage in imported.field_lineage)
+        assert {field for lineage in imported.field_lineage for field in lineage.source_fields} == {
+            "id",
+            "scenario",
+            "category",
+            "injection.enabled",
+            "injection.method",
+        }
     assert result.scenario_counts == {"A": 1, "B": 1, "C": 1}
     try:
         result.scenario_counts["A"] = 2  # type: ignore[index]

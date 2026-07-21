@@ -131,10 +131,14 @@ class SaberConversionRecord(FrozenModel):
     @model_validator(mode="after")
     def validate_disposition(self) -> Self:
         provenance = self.source_provenance
+        expected_kind = {
+            "saber": SourceAssetKind.SABER_TASK,
+            "inspect-evals-codeipi": SourceAssetKind.CODEIPI_SAMPLE,
+        }.get(self.source_project)
         if (
-            self.source_project != "saber"
+            expected_kind is None
             or self.record_role is not RecordRole.BENCHMARK_SCENARIO
-            or self.source_asset_kind is not SourceAssetKind.SABER_TASK
+            or self.source_asset_kind is not expected_kind
         ):
             raise ValueError("SABER conversion records require SABER task source records")
         if (
@@ -192,6 +196,15 @@ class SaberOfflineImporter:
     def import_record(self, request: ImporterRequest) -> ImportResult:
         if request.ledger_record.source_project != "saber":
             raise ValueError("SABER importer requires source_project='saber'")
+        return build_import_result(request)
+
+
+class CodeIPIOfflineImporter:
+    """Convert one arbitrary CodeIPI record through the project-owned contract."""
+
+    def import_record(self, request: ImporterRequest) -> ImportResult:
+        if request.ledger_record.source_project != "inspect-evals-codeipi":
+            raise ValueError("CodeIPI importer requires the Inspect Evals source project")
         return build_import_result(request)
 
 
@@ -312,6 +325,97 @@ class SaberP0Importer:
         )
 
 
+class CodeIPIP0Importer(SaberP0Importer):
+    """Convert and account for the complete locked CodeIPI P0 source set."""
+
+    def __init__(self, *, expected_total: int = 45) -> None:
+        super().__init__(
+            expected_total=expected_total,
+            expected_scenario_counts={"codeipi": expected_total},
+        )
+
+    def import_records(
+        self,
+        *,
+        records: Sequence[UpstreamLedgerRecord],
+        checkout: VerifiedSourceCheckout,
+        rights_decisions: Mapping[str, RightsDecision],
+        config: ConversionConfig,
+    ) -> SaberBatchImportResult:
+        validated_records = validate_records(records, require_initial_outputs=True)
+        if len(validated_records) != self.expected_total:
+            raise ValueError(
+                f"expected {self.expected_total} CodeIPI records, got {len(validated_records)}"
+            )
+        if set(rights_decisions) != {record.source_record_key for record in validated_records}:
+            raise ValueError("CodeIPI rights decisions must cover exactly the source record set")
+        if any(
+            record.source_project != "inspect-evals-codeipi"
+            or record.source_asset_kind is not SourceAssetKind.CODEIPI_SAMPLE
+            or record.record_role is not RecordRole.BENCHMARK_SCENARIO
+            for record in validated_records
+        ):
+            raise ValueError("CodeIPI batch contains a record from another source family")
+        scenario_counts = {"codeipi": len(validated_records)}
+        if checkout.source_project != "inspect-evals-codeipi":
+            raise ValueError("CodeIPI checkout marker has the wrong source project")
+        importer = CodeIPIOfflineImporter()
+        ordered_records = tuple(
+            sorted(
+                validated_records,
+                key=lambda item: (item.source_path, item.source_record_key),
+            )
+        )
+        imports: list[ImportResult] = []
+        dispositions: list[SaberConversionRecord] = []
+        for source_record in ordered_records:
+            rights = rights_decisions[source_record.source_record_key]
+            imported = importer.import_record(
+                self._request(
+                    source_record,
+                    checkout=checkout,
+                    rights=rights,
+                    config=config,
+                )
+            )
+            imports.append(imported)
+            asset_roles = ["scenario_template", "normal_task_fixture", "oracle_candidate"]
+            if source_record.attack_present:
+                asset_roles.append("attack_seed")
+            dispositions.append(
+                SaberConversionRecord(
+                    source_project=source_record.source_project,
+                    source_repository=source_record.source_repository,
+                    source_commit=source_record.source_commit,
+                    source_path=source_record.source_path,
+                    source_record_key=source_record.source_record_key,
+                    source_record_digest=source_record.source_record_digest,
+                    record_role=source_record.record_role,
+                    source_asset_kind=source_record.source_asset_kind,
+                    scenario_class=source_record.scenario_class,
+                    category=source_record.category,
+                    attack_present=source_record.attack_present,
+                    attack_origin=source_record.attack_origin,
+                    attack_delivery_mode=source_record.attack_delivery_mode,
+                    source_provenance=imported.pack.provenance[0],
+                    asset_roles=tuple(asset_roles),
+                    reuse_mode=rights.reuse_mode,
+                    rights_decision=rights,
+                    field_lineage=imported.field_lineage,
+                    conversion_losses=imported.conversion_losses,
+                    native_output_id=imported.pack.pack_id,
+                    review_state=imported.review_state,
+                    disposition=SaberConversionDisposition.CONVERTED_CANDIDATE,
+                    output_digest=imported.output_digest,
+                )
+            )
+        return SaberBatchImportResult(
+            records=tuple(dispositions),
+            imports=tuple(imports),
+            scenario_counts=scenario_counts,
+        )
+
+
 def _source_tuple_matches(
     provenance: SourceProvenance,
     request: ImporterRequest,
@@ -399,6 +503,14 @@ __all__ = [
     "SaberConversionRecord",
     "SaberOfflineImporter",
     "SaberP0Importer",
+    "CodeIPIOfflineImporter",
+    "CodeIPIP0Importer",
+    "CodeIPIBatchImportResult",
+    "CodeIPIConversionRecord",
     "VerifiedSourceCheckout",
     "build_import_result",
 ]
+
+
+CodeIPIConversionRecord = SaberConversionRecord
+CodeIPIBatchImportResult = SaberBatchImportResult
