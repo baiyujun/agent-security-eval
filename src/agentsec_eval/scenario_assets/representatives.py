@@ -300,6 +300,12 @@ def _source_field_sets(
                 "ground_truth.harm_description",
             ),
         )
+    if record.source_project == "terminal-bench-2":
+        return (
+            ("task.toml", "instruction.md"),
+            ("environment", "docker", "tests", "solution"),
+            ("utility_oracle", "reset_contract"),
+        )
     return (
         ("id", "is_benign", "injection_vector", "payload_category"),
         (
@@ -350,15 +356,18 @@ def _build_reconstruction(
     rights_decision: RightsDecision,
     config: ConversionConfig,
 ) -> ProjectAuthoredReconstruction:
-    if record.record_role is not RecordRole.BENCHMARK_SCENARIO:
-        raise ValueError("representative importers require benchmark scenario records")
-    if record.source_project not in {"saber", "inspect-evals-codeipi"}:
+    if record.record_role not in {
+        RecordRole.BENCHMARK_SCENARIO,
+        RecordRole.NORMAL_TASK_FIXTURE,
+    }:
+        raise ValueError("representative importers require scenario or normal-task records")
+    if record.source_project not in {"saber", "inspect-evals-codeipi", "terminal-bench-2"}:
         raise ValueError("representative importer received an unsupported source project")
-    expected_kind = (
-        SourceAssetKind.SABER_TASK
-        if record.source_project == "saber"
-        else SourceAssetKind.CODEIPI_SAMPLE
-    )
+    expected_kind = {
+        "saber": SourceAssetKind.SABER_TASK,
+        "inspect-evals-codeipi": SourceAssetKind.CODEIPI_SAMPLE,
+        "terminal-bench-2": SourceAssetKind.TERMINAL_BENCH_TASK_DIRECTORY,
+    }[record.source_project]
     if record.source_asset_kind is not expected_kind:
         raise ValueError("representative importer received an unsupported source asset kind")
     attack_present = record.attack_present

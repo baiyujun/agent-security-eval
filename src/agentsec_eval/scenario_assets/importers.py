@@ -134,10 +134,16 @@ class SaberConversionRecord(FrozenModel):
         expected_kind = {
             "saber": SourceAssetKind.SABER_TASK,
             "inspect-evals-codeipi": SourceAssetKind.CODEIPI_SAMPLE,
+            "terminal-bench-2": SourceAssetKind.TERMINAL_BENCH_TASK_DIRECTORY,
         }.get(self.source_project)
+        expected_role = (
+            RecordRole.NORMAL_TASK_FIXTURE
+            if self.source_project == "terminal-bench-2"
+            else RecordRole.BENCHMARK_SCENARIO
+        )
         if (
             expected_kind is None
-            or self.record_role is not RecordRole.BENCHMARK_SCENARIO
+            or self.record_role is not expected_role
             or self.source_asset_kind is not expected_kind
         ):
             raise ValueError("SABER conversion records require SABER task source records")
@@ -162,6 +168,12 @@ class SaberConversionRecord(FrozenModel):
                 self.review_state.status is not ReviewStatus.PROPOSED
             ):
                 raise ValueError("converted candidate requires a proposed native output")
+        if self.disposition is SaberConversionDisposition.NORMAL_TASK_ASSET:
+            if (
+                self.native_output_id is None
+                or self.review_state.status is not ReviewStatus.PROPOSED
+            ):
+                raise ValueError("normal task asset requires a proposed native output")
         return self
 
 
@@ -205,6 +217,15 @@ class CodeIPIOfflineImporter:
     def import_record(self, request: ImporterRequest) -> ImportResult:
         if request.ledger_record.source_project != "inspect-evals-codeipi":
             raise ValueError("CodeIPI importer requires the Inspect Evals source project")
+        return build_import_result(request)
+
+
+class TerminalBenchOfflineImporter:
+    """Convert one Terminal-Bench task directory without running its contents."""
+
+    def import_record(self, request: ImporterRequest) -> ImportResult:
+        if request.ledger_record.source_project != "terminal-bench-2":
+            raise ValueError("Terminal-Bench importer requires the locked source project")
         return build_import_result(request)
 
 
@@ -416,6 +437,93 @@ class CodeIPIP0Importer(SaberP0Importer):
         )
 
 
+class TerminalBenchP0Importer(SaberP0Importer):
+    """Convert and account for the complete locked Terminal-Bench P0 task set."""
+
+    def __init__(self, *, expected_total: int = 89) -> None:
+        super().__init__(
+            expected_total=expected_total,
+            expected_scenario_counts={"normal_task": expected_total},
+        )
+
+    def import_records(
+        self,
+        *,
+        records: Sequence[UpstreamLedgerRecord],
+        checkout: VerifiedSourceCheckout,
+        rights_decisions: Mapping[str, RightsDecision],
+        config: ConversionConfig,
+    ) -> SaberBatchImportResult:
+        validated_records = validate_records(records, require_initial_outputs=True)
+        if len(validated_records) != self.expected_total:
+            raise ValueError(
+                f"expected {self.expected_total} Terminal-Bench records, "
+                f"got {len(validated_records)}"
+            )
+        if set(rights_decisions) != {record.source_record_key for record in validated_records}:
+            raise ValueError(
+                "Terminal-Bench rights decisions must cover exactly the source record set"
+            )
+        if any(
+            record.source_project != "terminal-bench-2"
+            or record.source_asset_kind is not SourceAssetKind.TERMINAL_BENCH_TASK_DIRECTORY
+            or record.record_role is not RecordRole.NORMAL_TASK_FIXTURE
+            for record in validated_records
+        ):
+            raise ValueError("Terminal-Bench batch contains a record from another source family")
+        if checkout.source_project != "terminal-bench-2":
+            raise ValueError("Terminal-Bench checkout marker has the wrong source project")
+        importer = TerminalBenchOfflineImporter()
+        ordered_records = tuple(
+            sorted(validated_records, key=lambda item: (item.source_path, item.source_record_key))
+        )
+        imports: list[ImportResult] = []
+        dispositions: list[SaberConversionRecord] = []
+        for source_record in ordered_records:
+            rights = rights_decisions[source_record.source_record_key]
+            imported = importer.import_record(
+                self._request(
+                    source_record,
+                    checkout=checkout,
+                    rights=rights,
+                    config=config,
+                )
+            )
+            imports.append(imported)
+            dispositions.append(
+                SaberConversionRecord(
+                    source_project=source_record.source_project,
+                    source_repository=source_record.source_repository,
+                    source_commit=source_record.source_commit,
+                    source_path=source_record.source_path,
+                    source_record_key=source_record.source_record_key,
+                    source_record_digest=source_record.source_record_digest,
+                    record_role=source_record.record_role,
+                    source_asset_kind=source_record.source_asset_kind,
+                    scenario_class=source_record.scenario_class,
+                    category=source_record.category,
+                    attack_present=False,
+                    attack_origin=None,
+                    attack_delivery_mode=None,
+                    source_provenance=imported.pack.provenance[0],
+                    asset_roles=("normal_task_fixture", "environment_fixture", "oracle_candidate"),
+                    reuse_mode=rights.reuse_mode,
+                    rights_decision=rights,
+                    field_lineage=imported.field_lineage,
+                    conversion_losses=imported.conversion_losses,
+                    native_output_id=imported.pack.pack_id,
+                    review_state=imported.review_state,
+                    disposition=SaberConversionDisposition.NORMAL_TASK_ASSET,
+                    output_digest=imported.output_digest,
+                )
+            )
+        return SaberBatchImportResult(
+            records=tuple(dispositions),
+            imports=tuple(imports),
+            scenario_counts={"normal_task": len(ordered_records)},
+        )
+
+
 def _source_tuple_matches(
     provenance: SourceProvenance,
     request: ImporterRequest,
@@ -505,6 +613,8 @@ __all__ = [
     "SaberP0Importer",
     "CodeIPIOfflineImporter",
     "CodeIPIP0Importer",
+    "TerminalBenchOfflineImporter",
+    "TerminalBenchP0Importer",
     "CodeIPIBatchImportResult",
     "CodeIPIConversionRecord",
     "VerifiedSourceCheckout",
