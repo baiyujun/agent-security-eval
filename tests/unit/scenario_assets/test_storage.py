@@ -13,6 +13,7 @@ from agentsec_eval.scenario_assets import (
 
 from .test_models import (
     AGENT_FIXTURE_CONTENT,
+    ATTACK_FIXTURE_CONTENT,
     DOCKERFILE_CONTENT,
     PACK_TEST_CONTENT,
     PRIVATE_FIXTURE_CONTENT,
@@ -24,6 +25,7 @@ from .test_models import (
 def pack_contents() -> dict[str, bytes]:
     return {
         "fixtures/agent-visible/request.json": AGENT_FIXTURE_CONTENT,
+        "fixtures/agent-visible/issue.json": ATTACK_FIXTURE_CONTENT,
         "fixtures/verifier-private/oracle-state.json": PRIVATE_FIXTURE_CONTENT,
         "docker/Dockerfile": DOCKERFILE_CONTENT,
         "tools/workspace.json": TOOL_INTERFACE_CONTENT,
@@ -97,6 +99,7 @@ def test_loaded_pack_separates_file_visibility(tmp_path: Path) -> None:
         item.relative_path for item in loaded.files_for_visibility(Visibility.AGENT_VISIBLE)
     } == {
         "fixtures/agent-visible/request.json",
+        "fixtures/agent-visible/issue.json",
         "tools/workspace.json",
     }
     assert {

@@ -55,6 +55,7 @@ SHA = "a" * 64
 COMMIT = "b" * 40
 AGENT_FIXTURE_CONTENT = b'{"request":"safe change"}\n'
 PRIVATE_FIXTURE_CONTENT = b'{"expected":"unchanged"}\n'
+ATTACK_FIXTURE_CONTENT = b'{"title":"Synthetic issue"}\n'
 DOCKERFILE_CONTENT = b"FROM scratch\n"
 TOOL_INTERFACE_CONTENT = b'{"name":"workspace"}\n'
 PACK_TEST_CONTENT = b"assert pack.schema_version\n"
@@ -254,7 +255,10 @@ def make_complete_pack(output_digest: str = SHA) -> NativeScenarioPack:
             world_id="world.synthetic-repository",
             description="A local synthetic repository workspace.",
             environment_role_requirements=(EnvironmentRole.AGENT_WORKSPACE,),
-            fixture_role_requirements=(FixtureRole.NORMAL_TASK_INPUT,),
+            fixture_role_requirements=(
+                FixtureRole.NORMAL_TASK_INPUT,
+                FixtureRole.ATTACK_CHANNEL,
+            ),
             minimum_observation_level=scenario_assets.ObservationLevel.ENVIRONMENT_CONFIRMED,
             trust_boundary="Agent workspace is isolated from verifier-private state.",
         ),
@@ -310,7 +314,10 @@ def make_complete_pack(output_digest: str = SHA) -> NativeScenarioPack:
         ),
         case_schema=scenario_assets.CaseSchema(
             allowed_variants=tuple(ScenarioVariant),
-            required_fixture_roles=(FixtureRole.NORMAL_TASK_INPUT,),
+            required_fixture_roles=(
+                FixtureRole.NORMAL_TASK_INPUT,
+                FixtureRole.ATTACK_CHANNEL,
+            ),
             attack_variant_required_for_attacked_case=True,
         ),
         evidence=evidence("scenario.indirect-info-risk"),
@@ -357,7 +364,7 @@ def make_complete_pack(output_digest: str = SHA) -> NativeScenarioPack:
         placement_id="placement.issue",
         entry_point=EntryPoint.ISSUE,
         delivery_mode=AttackDeliveryMode.INDIRECT_CONTEXT,
-        insertion_target="fixture.workspace.issue_metadata",
+        insertion_target="fixture.issue",
         agent_visible=True,
         evidence=evidence("placement.issue"),
     )
@@ -366,6 +373,8 @@ def make_complete_pack(output_digest: str = SHA) -> NativeScenarioPack:
         role=FixtureRole.NORMAL_TASK_INPUT,
         visibility=Visibility.AGENT_VISIBLE,
         relative_path="fixtures/agent-visible/request.json",
+        materialization_path="workspace/request.json",
+        media_type="application/json",
         content_digest=content_digest(AGENT_FIXTURE_CONTENT),
         project_authored=True,
         evidence=evidence("fixture.workspace"),
@@ -375,9 +384,22 @@ def make_complete_pack(output_digest: str = SHA) -> NativeScenarioPack:
         role=FixtureRole.PRIVATE_VERIFIER_MATERIAL,
         visibility=Visibility.VERIFIER_PRIVATE,
         relative_path="fixtures/verifier-private/oracle-state.json",
+        materialization_path="verifier/oracle-state.json",
+        media_type="application/json",
         content_digest=content_digest(PRIVATE_FIXTURE_CONTENT),
         project_authored=True,
         evidence=evidence("fixture.private-verifier"),
+    )
+    attack_fixture = FixtureDefinition(
+        fixture_id="fixture.issue",
+        role=FixtureRole.ATTACK_CHANNEL,
+        visibility=Visibility.AGENT_VISIBLE,
+        relative_path="fixtures/agent-visible/issue.json",
+        materialization_path="workspace/.agentsec/issue.json",
+        media_type="application/json",
+        content_digest=content_digest(ATTACK_FIXTURE_CONTENT),
+        project_authored=True,
+        evidence=evidence("fixture.issue"),
     )
     capability = CapabilityDeclaration(
         capability_id="cap.filesystem-read",
@@ -398,7 +420,7 @@ def make_complete_pack(output_digest: str = SHA) -> NativeScenarioPack:
     environment = EnvironmentDefinition(
         environment_id="env.saber-a",
         roles=(EnvironmentRole.AGENT_WORKSPACE, EnvironmentRole.PRIVATE_VERIFIER),
-        fixture_ids=(fixture.fixture_id, private_fixture.fixture_id),
+        fixture_ids=(fixture.fixture_id, attack_fixture.fixture_id, private_fixture.fixture_id),
         capability_ids=(capability.capability_id,),
         network_mode="none",
         evidence=evidence("env.saber-a"),
@@ -434,7 +456,9 @@ def make_complete_pack(output_digest: str = SHA) -> NativeScenarioPack:
                 resource_id="resource.receiver",
             ),
         ),
-        baseline_digest=content_digest(AGENT_FIXTURE_CONTENT + PRIVATE_FIXTURE_CONTENT),
+        baseline_digest=scenario_assets.environment_baseline_digest(
+            (fixture, attack_fixture, private_fixture)
+        ),
         verification_probe_ids=("probe.reset",),
         evidence=evidence("reset.saber-a"),
     )
@@ -459,7 +483,7 @@ def make_complete_pack(output_digest: str = SHA) -> NativeScenarioPack:
             placement_id=placement.placement_id,
         ),
         environment_id=environment.environment_id,
-        initial_fixture_ids=(fixture.fixture_id,),
+        initial_fixture_ids=(fixture.fixture_id, attack_fixture.fixture_id),
         user_task_input=normal_task.user_visible_prompt,
         authorization_context_id=authorization.authorization_context_id,
         capability_requirements=CapabilityRequirements(
@@ -491,6 +515,7 @@ def make_complete_pack(output_digest: str = SHA) -> NativeScenarioPack:
         service_kind="tool",
         capability_ids=(capability.capability_id,),
         interface_path="tools/workspace.json",
+        materialization_path="workspace/.agentsec/tools/workspace.json",
         content_digest=content_digest(TOOL_INTERFACE_CONTENT),
         visibility=Visibility.AGENT_VISIBLE,
         evidence=evidence("tool.workspace"),
@@ -524,6 +549,7 @@ def make_complete_pack(output_digest: str = SHA) -> NativeScenarioPack:
         environment.environment_id,
         fixture.fixture_id,
         private_fixture.fixture_id,
+        attack_fixture.fixture_id,
         capability.capability_id,
         forbidden_network_capability.capability_id,
         authorization.authorization_context_id,
@@ -567,7 +593,7 @@ def make_complete_pack(output_digest: str = SHA) -> NativeScenarioPack:
         attack_variants=(attack_variant,),
         attack_placements=(placement,),
         environments=(environment,),
-        fixtures=(fixture, private_fixture),
+        fixtures=(fixture, attack_fixture, private_fixture),
         capabilities=(capability, forbidden_network_capability),
         authorization_contexts=(authorization,),
         oracle_suites=(oracle_suite,),
@@ -613,6 +639,7 @@ def test_executable_pack_schema_requires_physical_asset_declarations() -> None:
                     service_kind="tool",
                     capability_ids=("cap.filesystem-read",),
                     interface_path="tools/workspace.json",
+                    materialization_path="workspace/.agentsec/tools/workspace.json",
                     content_digest=tool_digest,
                     visibility=Visibility.AGENT_VISIBLE,
                     evidence=evidence("tool.workspace"),
@@ -691,3 +718,10 @@ def test_attack_variant_is_distinct_from_seed_and_is_pack_managed() -> None:
     assert hasattr(scenario_assets, "AttackVariant")
     assert "attack_variants" in scenario_assets.ExecutableScenarioPack.model_fields
     assert "variant_id" in scenario_assets.AttackConfiguration.model_fields
+
+
+def test_fixture_and_tool_assets_declare_sandbox_materialization_paths() -> None:
+    assert {"materialization_path", "media_type", "source_comment_prefix"} <= set(
+        scenario_assets.FixtureDefinition.model_fields
+    )
+    assert "materialization_path" in scenario_assets.ToolServiceDeclaration.model_fields

@@ -37,7 +37,8 @@ def test_compile_case_keeps_task_attack_and_private_oracles_separate() -> None:
     assert isinstance(compiled, CompiledRunInput)
     assert compiled.execution_spec.scenario.user_task == pack.normal_tasks[0].user_visible_prompt
     assert compiled.execution_spec.attack_candidate.candidate_id == "candidate.synthetic"
-    assert "Synthetic instruction" in compiled.execution_spec.attack_candidate.content
+    assert compiled.execution_spec.attack_candidate.content == ""
+    assert pack.attack_variants[0].content not in compiled.agent_visible_prompt
     assert compiled.attack_objective_id == "objective.exfiltration"
     assert compiled.private_oracle_material_refs
     assert "private.security_effect" in compiled.private_oracle_material_refs

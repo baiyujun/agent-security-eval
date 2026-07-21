@@ -73,6 +73,7 @@ RelativePosixPath = Annotated[
     StringConstraints(strict=True, min_length=1),
     AfterValidator(_relative_posix),
 ]
+SourceCommentPrefix = Annotated[str, StringConstraints(strict=True, min_length=1, max_length=8)]
 
 
 def _require_unique(values: tuple[object, ...], field_name: str) -> None:
@@ -498,9 +499,25 @@ class FixtureDefinition(FrozenModel):
     role: FixtureRole
     visibility: Visibility
     relative_path: RelativePosixPath
+    materialization_path: RelativePosixPath
+    media_type: Literal[
+        "application/json",
+        "text/markdown",
+        "text/plain",
+        "text/x-python",
+    ]
+    source_comment_prefix: SourceCommentPrefix | None = None
     content_digest: Sha256Digest
     project_authored: bool
     evidence: ComponentEvidence
+
+    @model_validator(mode="after")
+    def validate_materialization_format(self) -> Self:
+        if self.media_type == "text/x-python" and self.source_comment_prefix is None:
+            raise ValueError("source-code fixture requires source_comment_prefix")
+        if self.media_type != "text/x-python" and self.source_comment_prefix is not None:
+            raise ValueError("source_comment_prefix is only valid for source-code fixtures")
+        return self
 
 
 class CapabilityDeclaration(FrozenModel):
@@ -738,6 +755,7 @@ class ToolServiceDeclaration(FrozenModel):
     service_kind: Literal["tool", "mock_service"]
     capability_ids: tuple[AssetId, ...]
     interface_path: RelativePosixPath
+    materialization_path: RelativePosixPath
     content_digest: Sha256Digest
     visibility: Visibility
     evidence: ComponentEvidence

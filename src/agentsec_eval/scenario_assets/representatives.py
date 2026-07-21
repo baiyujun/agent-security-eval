@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from typing import Literal
 
 from agentsec_eval.reference_catalog import RecordRole, SourceAssetKind, UpstreamLedgerRecord
 from agentsec_eval.scenario_assets.enums import (
@@ -32,6 +33,7 @@ from agentsec_eval.scenario_assets.importers import (
     VerifiedSourceCheckout,
     build_import_result,
 )
+from agentsec_eval.scenario_assets.materialization import environment_baseline_digest
 from agentsec_eval.scenario_assets.models import (
     AttackConfiguration,
     AttackObjective,
@@ -195,7 +197,31 @@ def _content_digest(content: bytes) -> str:
     return hashlib.sha256(content).hexdigest()
 
 
-def _fixture_content(fixture_id: str, role: FixtureRole) -> bytes:
+FixtureMediaType = Literal[
+    "application/json",
+    "text/markdown",
+    "text/plain",
+    "text/x-python",
+]
+
+
+def _fixture_media_type(role: FixtureRole, entry_point: EntryPoint) -> FixtureMediaType:
+    if role is FixtureRole.ATTACK_CHANNEL and entry_point is EntryPoint.README:
+        return "text/markdown"
+    if role is FixtureRole.ATTACK_CHANNEL and entry_point is EntryPoint.SOURCE_COMMENT:
+        return "text/x-python"
+    return "application/json"
+
+
+def _fixture_content(
+    fixture_id: str,
+    role: FixtureRole,
+    media_type: FixtureMediaType,
+) -> bytes:
+    if media_type == "text/markdown":
+        return b"# Project workspace\n\nProject-authored contract fixture.\n"
+    if media_type == "text/x-python":
+        return b"def contract_target() -> bool:\n    return True\n"
     return (
         json.dumps(
             {
@@ -208,6 +234,22 @@ def _fixture_content(fixture_id: str, role: FixtureRole) -> bytes:
         )
         + "\n"
     ).encode()
+
+
+def _fixture_materialization_path(role: FixtureRole, entry_point: EntryPoint) -> str:
+    if role is FixtureRole.NORMAL_TASK_INPUT:
+        return "workspace/task.json"
+    if role is FixtureRole.ATTACK_CHANNEL:
+        return {
+            EntryPoint.ISSUE: "workspace/.agentsec/issue.json",
+            EntryPoint.README: "workspace/README.md",
+            EntryPoint.SOURCE_COMMENT: "workspace/src/contract_target.py",
+        }.get(entry_point, "workspace/.agentsec/attack-channel.json")
+    if role is FixtureRole.PRIVATE_VERIFIER_MATERIAL:
+        return "verifier/oracle-state.json"
+    if role is FixtureRole.PROTECTED_ASSET:
+        return "verifier/synthetic-secret.json"
+    return "harness/reset-snapshot.json"
 
 
 def _fixture_partition(visibility: Visibility) -> str:
@@ -412,7 +454,14 @@ def _build_reconstruction(
             relative_path=(
                 f"fixtures/{_fixture_partition(visibility)}/{fixture_id.replace('.', '/')}.json"
             ),
-            content_digest=_content_digest(_fixture_content(fixture_id, role)),
+            materialization_path=_fixture_materialization_path(role, entry_point),
+            media_type=_fixture_media_type(role, entry_point),
+            source_comment_prefix=(
+                "# " if _fixture_media_type(role, entry_point) == "text/x-python" else None
+            ),
+            content_digest=_content_digest(
+                _fixture_content(fixture_id, role, _fixture_media_type(role, entry_point))
+            ),
             project_authored=True,
             evidence=_component_evidence(fixture_id, rights_decision.rights_decision_id),
         )
@@ -472,12 +521,7 @@ def _build_reconstruction(
         ),
         evidence=_component_evidence(ids["authorization"], rights_decision.rights_decision_id),
     )
-    reset_baseline_digest = _content_digest(
-        b"".join(
-            _fixture_content(fixture.fixture_id, fixture.role)
-            for fixture in sorted(fixtures, key=lambda item: item.fixture_id)
-        )
-    )
+    reset_baseline_digest = environment_baseline_digest(fixtures)
     bundles: list[ProbeOracleBundle] = []
     for category in ProbeOracleCategory:
         bundle_id = f"bundle.{ids['suite']}.{category.value}"
@@ -633,6 +677,7 @@ def _build_reconstruction(
         service_kind="tool",
         capability_ids=tuple(capability.capability_id for capability in available_capabilities),
         interface_path=f"tools/{ids['case']}.json",
+        materialization_path=f"workspace/.agentsec/tools/{ids['case']}.json",
         content_digest=_content_digest(tool_interface_content),
         visibility=Visibility.AGENT_VISIBLE,
         evidence=_component_evidence(ids["tool_service"], rights_decision.rights_decision_id),

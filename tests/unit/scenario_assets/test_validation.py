@@ -158,7 +158,7 @@ def test_validate_pack_enforces_base_case_schema_fixture_roles() -> None:
         update={
             "required_fixture_roles": (
                 *base.case_schema.required_fixture_roles,
-                FixtureRole.ATTACK_CHANNEL,
+                FixtureRole.PROTECTED_ASSET,
             )
         }
     )

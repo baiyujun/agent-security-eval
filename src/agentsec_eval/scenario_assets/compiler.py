@@ -14,6 +14,7 @@ from agentsec_eval.domain import (
     TargetConfiguration,
 )
 from agentsec_eval.domain.models import AttackCandidate
+from agentsec_eval.scenario_assets.enums import AttackDeliveryMode, EntryPoint
 from agentsec_eval.scenario_assets.models import (
     AssetId,
     FrozenModel,
@@ -123,14 +124,19 @@ def compile_case(
             if placement.placement_id == validated_case.attack.placement_id
         )
         candidate_id = variant.candidate_id
-        candidate_content = variant.content if placement.agent_visible else ""
+        candidate_content = (
+            variant.content
+            if placement.entry_point is EntryPoint.USER_REQUEST
+            and placement.delivery_mode is AttackDeliveryMode.DIRECT_USER_REQUEST
+            else ""
+        )
         attack_objective_id = validated_case.attack.objective_id
     else:
         candidate_id = f"{validated_case.case_id}.no-attack"
         candidate_content = ""
         attack_objective_id = None
 
-    agent_prompt = normal_task.user_visible_prompt
+    agent_prompt = validated_case.user_task_input
     if candidate_content:
         agent_prompt = f"{agent_prompt}\n\n{candidate_content}"
 
@@ -139,7 +145,7 @@ def compile_case(
         target=config.target,
         scenario=ExecutionScenarioSpec(
             scenario_id=validated_case.base_scenario_id,
-            user_task=normal_task.user_visible_prompt,
+            user_task=validated_case.user_task_input,
             canary=_deterministic_canary(
                 validated_pack.pack_id,
                 validated_case.case_id,
