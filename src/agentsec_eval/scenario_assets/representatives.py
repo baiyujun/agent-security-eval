@@ -916,8 +916,47 @@ class CodeIPIRepresentativeImporter:
         return build_import_result(request)
 
 
+def deterministic_pack_asset_contents(pack: NativeScenarioPack) -> dict[str, bytes]:
+    """Render only project-authored physical bytes declared by one native pack."""
+
+    contents: dict[str, bytes] = {}
+    for fixture in pack.fixtures:
+        content = _fixture_content(fixture.fixture_id, fixture.role, fixture.media_type)
+        if _content_digest(content) != fixture.content_digest:
+            raise ValueError(f"fixture content generator drifted: {fixture.fixture_id}")
+        contents[fixture.relative_path] = content
+    docker_content = b"FROM python:3.11-slim\nWORKDIR /workspace\n"
+    for docker in pack.docker_environments:
+        if _content_digest(docker_content) != docker.dockerfile_digest:
+            raise ValueError(f"docker content generator drifted: {docker.docker_environment_id}")
+        contents[docker.dockerfile_path] = docker_content
+    for service in pack.tool_services:
+        content = (
+            json.dumps(
+                {
+                    "capabilities": list(service.capability_ids),
+                    "kind": service.service_kind,
+                    "name": service.tool_service_id,
+                },
+                sort_keys=True,
+                separators=(",", ":"),
+            )
+            + "\n"
+        ).encode()
+        if _content_digest(content) != service.content_digest:
+            raise ValueError(f"tool content generator drifted: {service.tool_service_id}")
+        contents[service.interface_path] = content
+    for pack_test in pack.pack_tests:
+        content = f"assert loaded_pack.pack.pack_id == {pack.pack_id!r}\n".encode()
+        if _content_digest(content) != pack_test.content_digest:
+            raise ValueError(f"pack test content generator drifted: {pack_test.pack_test_id}")
+        contents[pack_test.test_path] = content
+    return contents
+
+
 __all__ = [
     "CodeIPIRepresentativeImporter",
+    "deterministic_pack_asset_contents",
     "SaberRepresentativeImporter",
     "make_representative_request",
 ]
