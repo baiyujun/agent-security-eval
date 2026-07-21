@@ -168,12 +168,15 @@ worker. Unique conversation IDs and labels provide logical separation only.
 - Treat the adapted objective score as progress/stop feedback, never the final verdict.
 - Do not call PyRIT `AttackExecutor` from the campaign path; the Campaign Controller and Inspect own
   cross-run scheduling.
-- If selected after exact-release revalidation, reuse deterministic Converters through the installed
-  PyRIT package inside the policy integration; do not copy them.
-- Before enabling concurrent runs, test a worker-per-run design or prove that one shared memory with
-  conversation/label filtering meets the isolation requirement.
+- If selected after converter-specific compatibility validation against pinned PyRIT `0.14.0`, reuse
+  deterministic Converters through the installed package inside the policy integration; do not copy
+  them.
+- The current bounded integration serializes policy execution around process-wide CentralMemory.
+  Before enabling true parallel policy execution, test a process/worker isolation design.
 
-`UNKNOWN`: the acceptable concurrency/isolation mechanism and exact v0.14 versus v0.15 API target.
+`KNOWN LIMIT`: the bounded policy pins PyRIT `0.14.0`; process/worker parallelism, replacement of the
+private `PromptTarget._memory` compatibility check, and any later PyRIT upgrade require separate
+validation.
 
 ### promptfoo
 
