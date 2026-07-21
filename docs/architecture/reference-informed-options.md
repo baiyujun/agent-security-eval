@@ -115,11 +115,12 @@ only when at least one of these conditions holds:
 - it protects the unique Campaign-control or final-truth boundary; or
 - an upstream API/version/license is too unstable to become a durable contract.
 
-Inspect `Sample` can therefore remain the execution carrier. AgentDojo Task objects may appear only
-inside an Offline Benchmark Importer or isolated Upstream Replay Harness. PyRIT AttackContext remains
-inside its per-Run policy integration. ClawSentry event and trajectory semantics are design
-references only; its Gateway models and concrete adapters are not project import formats or
-standards. Promptfoo test cases remain candidate-generation import formats, not project standards.
+Inspect `Sample` can therefore remain the execution carrier. Rights-approved static AgentDojo asset
+records may appear as inputs to an Offline Benchmark Importer; executable AgentDojo `Task` objects
+may appear only inside an isolated Upstream Replay Harness. PyRIT AttackContext remains inside its
+per-Run policy integration. ClawSentry event and trajectory semantics are design references only;
+its Gateway models and concrete adapters are not project import formats or standards. Promptfoo test
+cases remain candidate-generation import formats, not project standards.
 
 ## Boundary Decisions Proposed Now
 
@@ -162,9 +163,10 @@ These are responsibility boundaries, not a requested directory tree:
 - Limitations: mock model, local sandbox rather than Docker, one sample, no external Agent, no
   cancellation/retry test, and no claim that the Inspect Score is final truth.
 
-The next architecture-risk experiment is PyRIT target/scorer replacement plus concurrent memory
-isolation. It should occur only after the first fixed-input Inspect vertical slice needs adaptive
-turns; it is not a prerequisite for the fixed-input milestone.
+Subsequent M0-B and M0-C validation pinned PyRIT `0.14.0` and exercised project-owned target/scorer
+integration plus serialized in-process CentralMemory isolation. Remaining risks are the private
+`PromptTarget._memory` compatibility check, PyRIT upgrades, and process/worker isolation for true
+parallel policy execution; they do not reopen the bounded per-Run integration decision.
 
 ## Adversarial Boundary Check
 

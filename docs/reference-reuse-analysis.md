@@ -407,7 +407,7 @@ bridges, multiple Samples, cancellation, retries, and concurrent artifact isolat
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Inspect AI | `0.3.246` / tag SHA above | Public Batch/Sample execution, tool, sandbox, and log APIs | release spike plus `Task`, `Sample`, `Solver`, `SandboxEnvironment`, `EvalLog` paths above | `DIRECT_DEPENDENCY` | MIT | Medium beta API churn | Candidate dependency after Docker and multi-sample contract validation. |
 | Inspect AI | same | Project input/output conversion and log materialization lifecycle | lazy `EvalLog.samples` plus execution-boundary findings above | `ADAPTER_REUSE` | MIT | Medium type/lifecycle leakage | Keep Inspect types inside the execution boundary. |
-| PyRIT | audit SHA; release target deferred | Per-run adaptive multi-turn policy | `RedTeamingAttack`, `PromptTarget`, `Scorer` | `ADAPTER_REUSE` | MIT | High: singleton memory and own executor | Defer production use until scorer/target and concurrency isolation spike. |
+| PyRIT | audit SHA; pinned release `0.14.0` | Per-run adaptive multi-turn policy | `RedTeamingAttack`, `PromptTarget`, `Scorer` | `ADAPTER_REUSE` | MIT | High: singleton memory and own executor | Use only inside the bounded per-Run policy integration with serialized in-process CentralMemory; retain private-API, upgrade, and process/worker parallelism debt. |
 | PyRIT | same | Deterministic converters | `pyrit/converter` | `ADAPTER_REUSE` | MIT | Medium dependency closure/API target unresolved | Defer; if adopted, use only through the pinned package inside the policy boundary. |
 | PyRIT | same | Cross-objective executor | `AttackExecutor` | `REJECT` | MIT | Duplicates campaign scheduling | Do not call from the campaign path. |
 | promptfoo | audit SHA; release pin deferred | Standalone candidate generation | `redteam generate`, `doGenerateRedteam`, `synthesize` | `ADAPTER_REUSE` | MIT | Medium: Node, YAML, remote/email/probe behavior | Revalidate a release and use an explicit plugin/strategy allowlist. |
@@ -470,7 +470,7 @@ and dependency-closure work without improving the currently needed boundary vali
 | Upstream | License evidence | Planned material / exact files | Modification/copy | Commercial use | Attribution / additional constraint |
 | --- | --- | --- | --- | --- | --- |
 | Inspect AI | root `LICENSE` at audit and release SHAs | installed public execution APIs; no repository files | none copied | permitted by MIT | Retain upstream copyright/license text where distribution requires it and record the dependency/version in the SBOM. |
-| PyRIT | root `LICENSE` | optional installed policy and `pyrit/converter/**` APIs | none copied | permitted by MIT | Retain upstream copyright/license text where required; release/API target is unresolved. |
+| PyRIT | root `LICENSE` | optional installed policy and `pyrit/converter/**` APIs | none copied | permitted by MIT | Retain upstream copyright/license text where required; the bounded policy pins `0.14.0`, and future upgrades require compatibility revalidation. |
 | promptfoo | root `LICENSE` | future pinned CLI plus generated YAML candidate import; no source path selected | no source copied | permitted by MIT | Retain package copyright/license text; record generated-output provenance and any service terms separately. |
 | ClawSentry | root `LICENSE` | event/pattern semantics only; no files selected | none | permitted, but no material adopted | Cite repository and SHA in derived design/assertion records. |
 | AgentDojo | root `LICENSE`; embedded notices in `src/agentdojo/yaml_loader.py` | possible offline-imported `src/agentdojo/data/suites/**` assets; no runtime | none in this PR | conditional on asset review | Preserve root MIT and applicable embedded MIT/CC-BY-SA attribution; approve fixture provenance before import. |
@@ -484,7 +484,8 @@ repository.
 ## Open Questions
 
 - Which exact Inspect AI version range should become the first runtime dependency?
-- Can PyRIT memory be isolated safely under concurrent Inspect samples without a process per run?
+- What process/worker isolation should replace serialized in-process CentralMemory when true parallel
+  policy execution is required?
 - Which promptfoo plugins and strategies are permitted and reproducible in local/self-hosted mode?
 - What minimum target observation capability is required for the first Coding/CLI scenario?
 - Which external datasets pass per-item provenance and commercial-use review?
