@@ -9,25 +9,32 @@ produce reproducible evaluation artifacts from explicit security assertions.
 
 ## Status
 
-This repository is at an early execution-validation stage. M0-A now provides a minimal formal
-Inspect AI `0.3.246` boundary and automated Docker evidence; it is not a complete security
-evaluation system or production execution backend. The current evidence and decisions are recorded
-in:
+The bounded M0 validation phase is complete:
 
-- [reference reuse analysis](docs/reference-reuse-analysis.md);
-- [candidate architecture options](docs/architecture/reference-informed-options.md); and
-- [M0-A Inspect execution validation](docs/development/m0-a-inspect-validation.md); and
-- [the throwaway Inspect AI execution spike](experiments/inspect-execution-model/README.md).
+- **M0-A:** Inspect AI execution boundary;
+- **M0-B:** assertion-backed progress scorer; and
+- **M0-C:** per-Run adaptive PyRIT policy.
 
-The throwaway spike remains research evidence only. M0-A independently implements project-owned
-domain and Target boundaries under `src/agentsec_eval/`; it does not freeze a complete product
-layout or persistent model.
+M0 proves that a project-owned Run can cross a pinned Inspect AI `0.3.246` execution boundary,
+produce project-native Target and trace evidence, map a project Progress Oracle into PyRIT `0.14.0`,
+and run a bounded adaptive policy with project-owned stopping semantics. Inspect owns isolated
+Batch/Sample execution inside the integration boundary. PyRIT owns adaptive prompt selection and
+progress feedback inside one Run. The project continues to own Run identity, Target Sessions,
+Canonical Trace, Oracle decisions, terminal states, and final security truth.
+
+M0 is not a complete product. It does not provide a production execution backend, Campaign
+Controller, Final Assertion Engine, scenario registry, benchmark importer, dataset, persistence,
+distributed workers, or a parallel PyRIT policy backend. See the
+[M0 closeout report](docs/development/m0-closeout.md) and the individual
+[M0-A](docs/development/m0-a-inspect-validation.md),
+[M0-B](docs/development/m0-b-pyrit-scorer-validation.md), and
+[M0-C](docs/development/m0-c-pyrit-policy-validation.md) validation reports.
 
 ## Core principles
 
 - The Campaign Controller is the only top-level controller.
-- Inspect AI is validated by M0-A as the Batch / Sample execution candidate; the production backend
-  remains incomplete.
+- Inspect AI is the validated Batch/Sample execution boundary; the M0-A Harness is not a production
+  backend.
 - promptfoo is only a candidate-generation backend.
 - PyRIT is only an Attack Policy within an individual Run.
 - The Final Assertion Engine is the sole formal source of security truth.
@@ -72,10 +79,25 @@ pip install -e ".[dev]"
 ruff check .
 ruff format --check .
 mypy
-pytest -m "not docker"
+pytest -m "not docker" \
+  --ignore=tests/unit/integrations/pyrit \
+  --ignore=tests/integration/m0b \
+  --ignore=tests/integration/m0c
 ```
 
-The M0-A integration tests also require a working Docker daemon and Docker Compose. They use a
+The optional PyRIT integration has a separate pinned dependency and test boundary:
+
+```bash
+pip install -e ".[dev,pyrit]"
+python -c 'from importlib.metadata import version; assert version("pyrit") == "0.14.0"'
+pytest \
+  tests/unit/integrations/pyrit \
+  tests/integration/m0b \
+  tests/integration/m0c \
+  tests/unit/integrations/test_pyrit_import_boundary.py
+```
+
+The M0-A integration tests require a working Docker daemon and Docker Compose. They use a
 deterministic Fake Target, an internal Compose network, and Inspect's no-key mock model:
 
 ```bash
