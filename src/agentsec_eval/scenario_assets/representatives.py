@@ -129,6 +129,14 @@ def _entry_point(record: UpstreamLedgerRecord) -> EntryPoint:
         return EntryPoint.USER_REQUEST
     if delivery in {"tool_output", "tool_result"}:
         return EntryPoint.TOOL_RESULT
+    if delivery == "file_content":
+        return EntryPoint.FILE_CONTENT
+    if delivery == "config_inject":
+        return EntryPoint.CONFIGURATION
+    if delivery == "error_message":
+        return EntryPoint.ERROR_MESSAGE
+    if delivery == "multi_step":
+        return EntryPoint.DELAYED_CONTEXT
     if "comment" in delivery or "comment" in key or "comment" in category:
         return EntryPoint.SOURCE_COMMENT
     if "readme" in delivery or "readme" in key or "readme" in category:

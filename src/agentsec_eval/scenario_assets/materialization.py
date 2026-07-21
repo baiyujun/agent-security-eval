@@ -248,6 +248,11 @@ def _inject_file_placement(
             raise ValueError("source-comment placement requires a declared comment prefix")
         comment = "\n".join(f"{source_comment_prefix}{line}" for line in content.splitlines())
         rendered = f"{comment}\n{target.content.decode('utf-8')}".encode()
+    elif entry_point in {EntryPoint.FILE_CONTENT, EntryPoint.CONFIGURATION}:
+        document = _json_document(target)
+        field = "content" if entry_point is EntryPoint.FILE_CONTENT else "configuration"
+        document[field] = content
+        rendered = (json.dumps(document, sort_keys=True, separators=(",", ":")) + "\n").encode()
     else:
         raise ValueError(f"entry point is not a file placement: {entry_point.value}")
     _replace_file(files, target_id, rendered)
@@ -293,7 +298,13 @@ def materialize_case(
             if compiled.execution_spec.attack_candidate.content != variant.content:
                 raise ValueError("direct attack content is missing from execution input")
             attack_materialized = True
-        elif entry_point in {EntryPoint.ISSUE, EntryPoint.README, EntryPoint.SOURCE_COMMENT}:
+        elif entry_point in {
+            EntryPoint.ISSUE,
+            EntryPoint.README,
+            EntryPoint.SOURCE_COMMENT,
+            EntryPoint.FILE_CONTENT,
+            EntryPoint.CONFIGURATION,
+        }:
             fixture = next(
                 (item for item in pack.fixtures if item.fixture_id == placement.insertion_target),
                 None,
@@ -308,7 +319,12 @@ def materialize_case(
                 source_comment_prefix=fixture.source_comment_prefix,
             )
             attack_materialized = True
-        elif entry_point in {EntryPoint.BUILD_LOG, EntryPoint.TOOL_RESULT}:
+        elif entry_point in {
+            EntryPoint.BUILD_LOG,
+            EntryPoint.TOOL_RESULT,
+            EntryPoint.ERROR_MESSAGE,
+            EntryPoint.DELAYED_CONTEXT,
+        }:
             channel_injections.append(
                 MaterializedChannelInjection(
                     injection_id=f"injection.{case.case_id}.{entry_point.value}",

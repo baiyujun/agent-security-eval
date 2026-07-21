@@ -66,7 +66,8 @@ def loaded_pack_for_entry_point(
         "tool.workspace"
         if entry_point is EntryPoint.MCP_TOOL_DEFINITION
         else "channel.build"
-        if entry_point is EntryPoint.BUILD_LOG
+        if entry_point
+        in {EntryPoint.BUILD_LOG, EntryPoint.ERROR_MESSAGE, EntryPoint.DELAYED_CONTEXT}
         else "tool.shell"
         if entry_point is EntryPoint.TOOL_RESULT
         else attack_fixture.fixture_id
@@ -200,7 +201,12 @@ def test_source_comment_attack_materializes_as_source_comment(tmp_path: Path) ->
 
 
 def test_build_log_and_tool_result_attacks_materialize_as_channels(tmp_path: Path) -> None:
-    for entry_point in (EntryPoint.BUILD_LOG, EntryPoint.TOOL_RESULT):
+    for entry_point in (
+        EntryPoint.BUILD_LOG,
+        EntryPoint.TOOL_RESULT,
+        EntryPoint.ERROR_MESSAGE,
+        EntryPoint.DELAYED_CONTEXT,
+    ):
         loaded = loaded_pack_for_entry_point(tmp_path, entry_point)
         compiled = compile_case(loaded.pack.cases[0], loaded.pack, run_configuration())
 
@@ -209,6 +215,23 @@ def test_build_log_and_tool_result_attacks_materialize_as_channels(tmp_path: Pat
         assert len(materialized.channel_injections) == 1
         assert materialized.channel_injections[0].entry_point is entry_point
         assert materialized.channel_injections[0].content == loaded.pack.attack_variants[0].content
+        assert loaded.pack.attack_variants[0].content not in compiled.agent_visible_prompt
+
+
+def test_file_and_configuration_attacks_materialize_into_agent_visible_fixture(
+    tmp_path: Path,
+) -> None:
+    for entry_point, field in (
+        (EntryPoint.FILE_CONTENT, "content"),
+        (EntryPoint.CONFIGURATION, "configuration"),
+    ):
+        loaded = loaded_pack_for_entry_point(tmp_path, entry_point)
+        compiled = compile_case(loaded.pack.cases[0], loaded.pack, run_configuration())
+
+        materialized = scenario_assets.materialize_case(compiled, loaded)
+
+        fixture = next(item for item in materialized.files if item.component_id == "fixture.issue")
+        assert json.loads(fixture.content)[field] == loaded.pack.attack_variants[0].content
         assert loaded.pack.attack_variants[0].content not in compiled.agent_visible_prompt
 
 

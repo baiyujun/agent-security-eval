@@ -26,6 +26,10 @@ class EntryPoint(StrEnum):
     BUILD_LOG = "build_log"
     TOOL_RESULT = "tool_result"
     MCP_TOOL_DEFINITION = "mcp_tool_definition"
+    FILE_CONTENT = "file_content"
+    CONFIGURATION = "configuration"
+    ERROR_MESSAGE = "error_message"
+    DELAYED_CONTEXT = "delayed_context"
 
 
 class AttackDeliveryMode(StrEnum):
@@ -101,6 +105,22 @@ class ReviewStatus(StrEnum):
     APPROVED = "approved"
     NEEDS_REVIEW = "needs_review"
     REJECTED = "rejected"
+
+
+class SaberConversionDisposition(StrEnum):
+    CONVERTED_CANDIDATE = "converted_candidate"
+    APPROVED_EXECUTABLE = "approved_executable"
+    NORMAL_TASK_ASSET = "normal_task_asset"
+    ENVIRONMENT_FIXTURE_ASSET = "environment_fixture_asset"
+    ATTACK_SEED_ASSET = "attack_seed_asset"
+    ORACLE_CANDIDATE = "oracle_candidate"
+    NEEDS_MANUAL_RECONSTRUCTION = "needs_manual_reconstruction"
+    RIGHTS_BLOCKED = "rights_blocked"
+    UNSUPPORTED_SEMANTICS = "unsupported_semantics"
+    DUPLICATE = "duplicate"
+    MALFORMED = "malformed"
+    CONVERSION_FAILED = "conversion_failed"
+    INTENTIONALLY_EXCLUDED = "intentionally_excluded"
 
 
 class ReuseMode(StrEnum):

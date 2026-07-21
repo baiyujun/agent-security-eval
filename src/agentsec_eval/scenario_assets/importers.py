@@ -2,11 +2,23 @@
 
 from __future__ import annotations
 
-from typing import Protocol, Self, runtime_checkable
+from collections.abc import Mapping, Sequence
+from types import MappingProxyType
+from typing import Annotated, Protocol, Self, runtime_checkable
 
-from pydantic import model_validator
+from pydantic import AfterValidator, PlainSerializer, model_validator
 
-from agentsec_eval.reference_catalog import UpstreamLedgerRecord
+from agentsec_eval.reference_catalog import (
+    RecordRole,
+    SourceAssetKind,
+    UpstreamLedgerRecord,
+    validate_records,
+)
+from agentsec_eval.scenario_assets.enums import (
+    ReuseMode,
+    ReviewStatus,
+    SaberConversionDisposition,
+)
 from agentsec_eval.scenario_assets.models import (
     AssetId,
     CommitSha,
@@ -14,6 +26,7 @@ from agentsec_eval.scenario_assets.models import (
     FieldLineage,
     FrozenModel,
     NativeScenarioPack,
+    RelativePosixPath,
     ReviewState,
     RightsDecision,
     SemanticVersion,
@@ -22,6 +35,21 @@ from agentsec_eval.scenario_assets.models import (
     StrictText,
 )
 from agentsec_eval.scenario_assets.validation import pack_content_digest, validate_pack
+
+
+def _freeze_counts(value: Mapping[str, int]) -> Mapping[str, int]:
+    return MappingProxyType(dict(value))
+
+
+def _serialize_counts(value: Mapping[str, int]) -> dict[str, int]:
+    return dict(value)
+
+
+ScenarioCounts = Annotated[
+    Mapping[str, int],
+    AfterValidator(_freeze_counts),
+    PlainSerializer(_serialize_counts, return_type=dict[str, int]),
+]
 
 
 class VerifiedSourceCheckout(FrozenModel):
@@ -73,10 +101,215 @@ class ImportResult(FrozenModel):
     review_state: ReviewState
 
 
+class SaberConversionRecord(FrozenModel):
+    """One complete, reviewable SABER conversion disposition."""
+
+    source_project: AssetId
+    source_repository: StrictText
+    source_commit: CommitSha
+    source_path: RelativePosixPath
+    source_record_key: StrictText
+    source_record_digest: Sha256Digest
+    record_role: RecordRole
+    source_asset_kind: SourceAssetKind
+    scenario_class: StrictText
+    category: StrictText
+    attack_present: bool | None
+    attack_origin: StrictText | None
+    attack_delivery_mode: StrictText | None
+    source_provenance: SourceProvenance
+    asset_roles: tuple[StrictText, ...]
+    reuse_mode: ReuseMode
+    rights_decision: RightsDecision
+    field_lineage: tuple[FieldLineage, ...]
+    conversion_losses: tuple[ConversionLoss, ...]
+    native_output_id: AssetId | None
+    review_state: ReviewState
+    disposition: SaberConversionDisposition
+    output_digest: Sha256Digest
+
+    @model_validator(mode="after")
+    def validate_disposition(self) -> Self:
+        provenance = self.source_provenance
+        if (
+            self.source_project != "saber"
+            or self.record_role is not RecordRole.BENCHMARK_SCENARIO
+            or self.source_asset_kind is not SourceAssetKind.SABER_TASK
+        ):
+            raise ValueError("SABER conversion records require SABER task source records")
+        if (
+            provenance.source_project != self.source_project
+            or provenance.repository != self.source_repository
+            or provenance.commit != self.source_commit
+            or provenance.source_path != self.source_path
+            or provenance.source_record_key != self.source_record_key
+            or provenance.source_record_digest != self.source_record_digest
+        ):
+            raise ValueError("SABER conversion provenance does not match source record")
+        if (
+            self.rights_decision.source_project != self.source_project
+            or self.rights_decision.source_record_key != self.source_record_key
+        ):
+            raise ValueError("SABER rights decision does not match source record")
+        if not self.asset_roles:
+            raise ValueError("SABER conversion requires asset roles")
+        if self.disposition is SaberConversionDisposition.CONVERTED_CANDIDATE:
+            if self.native_output_id is None or (
+                self.review_state.status is not ReviewStatus.PROPOSED
+            ):
+                raise ValueError("converted candidate requires a proposed native output")
+        return self
+
+
+class SaberBatchImportResult(FrozenModel):
+    """Atomic result for a complete SABER source set."""
+
+    records: tuple[SaberConversionRecord, ...]
+    imports: tuple[ImportResult, ...]
+    scenario_counts: ScenarioCounts
+
+    @model_validator(mode="after")
+    def validate_batch(self) -> Self:
+        if len(self.records) != len(self.imports):
+            raise ValueError("SABER conversion records and imports must be aligned")
+        if len(self.records) != sum(self.scenario_counts.values()):
+            raise ValueError("SABER scenario counts must sum to the record count")
+        keys = tuple(record.source_record_key for record in self.records)
+        if len(keys) != len(set(keys)):
+            raise ValueError("SABER conversion record keys must be unique")
+        return self
+
+
 @runtime_checkable
 class OfflineBenchmarkImporter(Protocol):
     def import_record(self, request: ImporterRequest) -> ImportResult:
         """Convert one verified source record without entering a source runtime."""
+
+
+class SaberOfflineImporter:
+    """Convert one arbitrary SABER record through the project-owned importer contract."""
+
+    def import_record(self, request: ImporterRequest) -> ImportResult:
+        if request.ledger_record.source_project != "saber":
+            raise ValueError("SABER importer requires source_project='saber'")
+        return build_import_result(request)
+
+
+class SaberP0Importer:
+    """Convert and account for the complete locked SABER P0 source set."""
+
+    def __init__(
+        self,
+        *,
+        expected_total: int = 716,
+        expected_scenario_counts: Mapping[str, int] | None = None,
+    ) -> None:
+        self.expected_total = expected_total
+        self.expected_scenario_counts = dict(
+            expected_scenario_counts or {"A": 289, "B": 186, "C": 241}
+        )
+
+    def import_records(
+        self,
+        *,
+        records: Sequence[UpstreamLedgerRecord],
+        checkout: VerifiedSourceCheckout,
+        rights_decisions: Mapping[str, RightsDecision],
+        config: ConversionConfig,
+    ) -> SaberBatchImportResult:
+        validated_records = validate_records(records, require_initial_outputs=True)
+        if len(validated_records) != self.expected_total:
+            raise ValueError(
+                f"expected {self.expected_total} SABER records, got {len(validated_records)}"
+            )
+        if set(rights_decisions) != {record.source_record_key for record in validated_records}:
+            raise ValueError("SABER rights decisions must cover exactly the source record set")
+        scenario_counts = {
+            scenario: sum(record.scenario_class == scenario for record in validated_records)
+            for scenario in ("A", "B", "C")
+        }
+        if scenario_counts != self.expected_scenario_counts:
+            raise ValueError(
+                f"SABER scenario counts disagree: expected={self.expected_scenario_counts}, "
+                f"actual={scenario_counts}"
+            )
+        if checkout.source_project != "saber":
+            raise ValueError("SABER checkout marker has the wrong source project")
+        importer = SaberOfflineImporter()
+        ordered_records = tuple(
+            sorted(
+                validated_records,
+                key=lambda item: (
+                    item.source_path,
+                    item.source_record_key,
+                ),
+            )
+        )
+        imports: list[ImportResult] = []
+        dispositions: list[SaberConversionRecord] = []
+        for source_record in ordered_records:
+            rights = rights_decisions[source_record.source_record_key]
+            request = self._request(
+                source_record,
+                checkout=checkout,
+                rights=rights,
+                config=config,
+            )
+            imported = importer.import_record(request)
+            imports.append(imported)
+            provenance = imported.pack.provenance[0]
+            asset_roles = ["scenario_template", "normal_task_fixture", "oracle_candidate"]
+            if source_record.attack_present:
+                asset_roles.append("attack_seed")
+            dispositions.append(
+                SaberConversionRecord(
+                    source_project=source_record.source_project,
+                    source_repository=source_record.source_repository,
+                    source_commit=source_record.source_commit,
+                    source_path=source_record.source_path,
+                    source_record_key=source_record.source_record_key,
+                    source_record_digest=source_record.source_record_digest,
+                    record_role=source_record.record_role,
+                    source_asset_kind=source_record.source_asset_kind,
+                    scenario_class=source_record.scenario_class,
+                    category=source_record.category,
+                    attack_present=source_record.attack_present,
+                    attack_origin=source_record.attack_origin,
+                    attack_delivery_mode=source_record.attack_delivery_mode,
+                    source_provenance=provenance,
+                    asset_roles=tuple(asset_roles),
+                    reuse_mode=rights.reuse_mode,
+                    rights_decision=rights,
+                    field_lineage=imported.field_lineage,
+                    conversion_losses=imported.conversion_losses,
+                    native_output_id=imported.pack.pack_id,
+                    review_state=imported.review_state,
+                    disposition=SaberConversionDisposition.CONVERTED_CANDIDATE,
+                    output_digest=imported.output_digest,
+                )
+            )
+        return SaberBatchImportResult(
+            records=tuple(dispositions),
+            imports=tuple(imports),
+            scenario_counts=scenario_counts,
+        )
+
+    @staticmethod
+    def _request(
+        source_record: UpstreamLedgerRecord,
+        *,
+        checkout: VerifiedSourceCheckout,
+        rights: RightsDecision,
+        config: ConversionConfig,
+    ) -> ImporterRequest:
+        from agentsec_eval.scenario_assets.representatives import make_representative_request
+
+        return make_representative_request(
+            source_record,
+            checkout=checkout,
+            rights_decision=rights,
+            config=config,
+        )
 
 
 def _source_tuple_matches(
@@ -162,6 +395,10 @@ __all__ = [
     "ImporterRequest",
     "OfflineBenchmarkImporter",
     "ProjectAuthoredReconstruction",
+    "SaberBatchImportResult",
+    "SaberConversionRecord",
+    "SaberOfflineImporter",
+    "SaberP0Importer",
     "VerifiedSourceCheckout",
     "build_import_result",
 ]
