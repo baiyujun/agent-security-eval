@@ -5,6 +5,15 @@ from agentsec_eval.reference_catalog.discovery.base import (
     SourceCheckout,
     SourceDiscoverer,
 )
+from agentsec_eval.reference_catalog.discovery.codeipi import CodeIPIDiscoverer
 from agentsec_eval.reference_catalog.discovery.saber import SaberDiscoverer
+from agentsec_eval.reference_catalog.discovery.terminal_bench import TerminalBenchDiscoverer
 
-__all__ = ["DiscoveryContext", "SaberDiscoverer", "SourceCheckout", "SourceDiscoverer"]
+__all__ = [
+    "CodeIPIDiscoverer",
+    "DiscoveryContext",
+    "SaberDiscoverer",
+    "SourceCheckout",
+    "SourceDiscoverer",
+    "TerminalBenchDiscoverer",
+]
