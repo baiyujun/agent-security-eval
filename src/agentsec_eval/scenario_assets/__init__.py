@@ -24,6 +24,15 @@ from agentsec_eval.scenario_assets.enums import (
     ScenarioVariant,
     Visibility,
 )
+from agentsec_eval.scenario_assets.importers import (
+    ConversionConfig,
+    ImporterRequest,
+    ImportResult,
+    OfflineBenchmarkImporter,
+    ProjectAuthoredReconstruction,
+    VerifiedSourceCheckout,
+    build_import_result,
+)
 from agentsec_eval.scenario_assets.models import (
     AssetId,
     AttackConfiguration,
@@ -80,6 +89,7 @@ __all__ = [
     "CommitSha",
     "CompiledRunInput",
     "ComponentEvidence",
+    "ConversionConfig",
     "ConversionLoss",
     "ConversionLossKind",
     "EntryPoint",
@@ -98,6 +108,7 @@ __all__ = [
     "ProbeDefinition",
     "ProbeOracleBundle",
     "ProbeOracleCategory",
+    "ProjectAuthoredReconstruction",
     "RelativePosixPath",
     "ResetAction",
     "ResetContract",
@@ -115,6 +126,11 @@ __all__ = [
     "SourceProvenance",
     "StrictText",
     "Visibility",
+    "ImportResult",
+    "ImporterRequest",
+    "OfflineBenchmarkImporter",
+    "VerifiedSourceCheckout",
+    "build_import_result",
     "pack_content_digest",
     "validate_pack",
     "with_computed_digest",
