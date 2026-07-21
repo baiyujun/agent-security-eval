@@ -189,7 +189,7 @@ Draft PR #7 review-corrected Head results:
   boundary when it consumes terminal and stage fields.
 - It does not claim process-global `CentralMemory` isolation, cancellation safety, persistence, or
   multi-process behavior.
-- No `BaseScenario`, `ScenarioCase`, AttackSeed, Scenario Registry, Benchmark Adapter, importer, or
-  dataset is introduced.
+- No `BaseScenario`, `ScenarioCase`, AttackSeed, Scenario Registry, external Benchmark Runtime
+  Adapter, importer, or dataset is introduced.
 - `m0a_harness.py` remains unchanged bounded validation code and is not promoted into a production
   execution backend.

@@ -39,10 +39,21 @@ Security findings, attack progress, control results, normal-task utility, eviden
 harness integrity, and unresolved observations must remain distinct. Third-party runtime objects may
 be used inside an integration, but they are not automatically the project's durable contract.
 
-## Candidate Designs
+## Architecture References
 
 The source audit and architecture comparison are documented in
 [Reference Reuse Analysis](../reference-reuse-analysis.md) and
-[Reference-Informed Architecture Options](reference-informed-options.md). Those documents recommend
-a direction for the next experiment; they do not claim that Inspect AI, promptfoo, PyRIT,
+[Reference-Informed Architecture Options](reference-informed-options.md). Those documents record
+research boundaries and follow-up work; they do not claim that Inspect AI, promptfoo, PyRIT,
 observation capture, assertions, or storage integrations are implemented.
+
+## Scenario Asset Decisions
+
+- [ADR-0002: Offline Import / Native Runtime](../adr/0002-offline-import-native-runtime.md)
+  is the accepted external Benchmark reuse boundary.
+- [Scenario and Data Assets v1.1](scenario-data-assets-v1.1.md) is the accepted, canonical
+  scenario-assets plan activated when this PR merges to `main`.
+- [Reference Reuse Audit](reference-reuse-audit.md) maps fixed source evidence to the selected
+  reuse boundary without duplicating the source-lock manifests.
+- [Importer Spike Plan](../development/importer-spike-plan.md) defines the two initial offline
+  conversion proofs and their optional upstream replay comparison.

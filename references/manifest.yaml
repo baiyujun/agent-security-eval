@@ -66,7 +66,7 @@ references:
       - capability: Gateway, online models, and concrete adapters
         classification: REJECT
     role: target capability and observation reference
-    first_version_decision: borrow event semantics but reject Gateway and model imports
+    first_version_decision: re-express event and trajectory semantics only; reject Gateway, model, and adapter imports
     license: MIT
     license_evidence: [LICENSE]
     commercial_use: permitted-with-license-notice
@@ -90,13 +90,14 @@ references:
       - capability: cross-objective AttackExecutor
         classification: REJECT
     role: adaptive multi-turn attack policy within one run
-    first_version_decision: defer pending target/scorer and memory-isolation proof
+    first_version_decision: pin 0.14.0 for the bounded per-run policy; keep process-wide serialization and track private-memory compatibility as non-blocking debt
     license: MIT
     license_evidence: [LICENSE]
     commercial_use: permitted-with-license-notice
     license_caveats:
       - The audited development commit and stable release expose different API targets.
-      - Process-global CentralMemory makes concurrent run isolation unresolved.
+      - Process-global CentralMemory requires serialized in-process policy execution; callers may queue concurrently, but policies do not run in parallel within one process.
+      - The pinned integration reads PromptTarget._memory to reject components created against foreign CentralMemory; isolate this private dependency before a PyRIT upgrade.
     copied_files: []
 
   - name: AgentDojo
@@ -108,13 +109,13 @@ references:
     classification_status: verified-at-fixed-commit
     reuse_candidates:
       - capability: isolated executable suites and oracles
-        classification: ADAPTER_REUSE
+        classification: DESIGN_REFERENCE
       - capability: provenance-approved fixtures and vectors
         classification: DATA_REUSE
       - capability: project-wide runtime ownership
         classification: REJECT
-    role: executable scenario and utility/security oracle reference
-    first_version_decision: consider a later isolated suite adapter after provenance review
+    role: stateful scenario and utility/security oracle reference
+    first_version_decision: use suite and oracle semantics as design inputs; permit offline asset import only after provenance review, with upstream runtime limited to isolated replay
     license: MIT-with-embedded-third-party-notices
     license_evidence: [LICENSE, src/agentdojo/yaml_loader.py]
     commercial_use: conditional-on-asset-review-and-notices

@@ -13,8 +13,8 @@ ExecutionRunSpec + explicit attack_objective + open TargetSession
 ```
 
 It is a bounded embedding validation. It is not a production Execution Backend, Campaign
-Controller, Benchmark Adapter, Scenario Registry, Final Assertion Engine, `RunOutcome`, or
-parallel PyRIT policy backend.
+Controller, external Benchmark Runtime Adapter, Scenario Registry, Final Assertion Engine,
+`RunOutcome`, or parallel PyRIT policy backend.
 
 ## Runtime Boundaries
 
@@ -112,7 +112,7 @@ and 2 M0-A Docker tests passed. Ruff, format checking, global MyPy, workflow YAM
 ## Explicit Non-Goals
 
 - No `BaseScenario`, `ScenarioCase`, `AttackSeed`, `ExecutableScenarioPack`, registry, importer,
-  dataset, or Benchmark Adapter.
+  dataset, or external Benchmark Runtime Adapter.
 - No change to reference manifests, source locks, reference asset docs, scenario packs, datasets,
   or the M0-A Harness.
 - No production Final Assertion Engine and no security verdict in Attack Policy output.
