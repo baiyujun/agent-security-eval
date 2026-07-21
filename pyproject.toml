@@ -56,4 +56,5 @@ exclude = [
   "src/agentsec_eval/integrations/pyrit",
   "tests/unit/integrations/pyrit",
   "tests/integration/m0b",
+  "tests/integration/m0c",
 ]

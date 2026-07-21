@@ -64,6 +64,9 @@ TraceEventType = Literal[
     "environment_effect",
     "session_closed",
     "harness_error",
+    "adversarial_prompt",
+    "progress_decision",
+    "policy_stopped",
 ]
 ObservationStrength = Literal[
     "target_reported",

@@ -33,6 +33,7 @@ jobs:
           pytest -m "not docker"
           --ignore=tests/unit/integrations/pyrit
           --ignore=tests/integration/m0b
+          --ignore=tests/integration/m0c
 
   m0a-docker:
     runs-on: ubuntu-latest
@@ -87,6 +88,53 @@ jobs:
       - name: Pytest (M0-B)
         run: |
           pytest \
-            tests/unit/integrations/pyrit \
+            tests/unit/integrations/pyrit/test_scorer.py \
             tests/integration/m0b \
+            tests/unit/integrations/test_pyrit_import_boundary.py
+
+  m0c-pyrit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,pyrit]"
+
+      - name: Verify PyRIT version
+        run: |
+          python -c 'from importlib.metadata import version; assert version("pyrit") == "0.14.0"'
+
+      - name: MyPy (M0-C PyRIT integration)
+        run: |
+          mypy \
+            src/agentsec_eval/integrations/pyrit/__init__.py \
+            src/agentsec_eval/integrations/pyrit/scorer.py \
+            src/agentsec_eval/integrations/pyrit/prompt_target.py \
+            src/agentsec_eval/integrations/pyrit/result.py \
+            src/agentsec_eval/integrations/pyrit/memory.py \
+            src/agentsec_eval/integrations/pyrit/policy.py \
+            tests/unit/integrations/pyrit/test_scorer.py \
+            tests/unit/integrations/pyrit/test_prompt_target.py \
+            tests/unit/integrations/pyrit/test_result.py \
+            tests/unit/integrations/pyrit/test_memory.py \
+            tests/integration/m0c/conftest.py \
+            tests/integration/m0c/test_policy.py \
+            tests/integration/m0c/test_isolation.py \
+            tests/integration/m0c/test_final_truth.py
+
+      - name: Pytest (M0-C)
+        run: |
+          pytest \
+            tests/unit/integrations/pyrit/test_scorer.py \
+            tests/unit/integrations/pyrit/test_prompt_target.py \
+            tests/unit/integrations/pyrit/test_result.py \
+            tests/unit/integrations/pyrit/test_memory.py \
+            tests/integration/m0c \
             tests/unit/integrations/test_pyrit_import_boundary.py

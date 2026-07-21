@@ -52,9 +52,23 @@ class ProgressDecision(BaseModel):
     metadata: dict[str, JsonValue] = Field(default_factory=dict)
 
     @model_validator(mode="after")
-    def require_evidence_for_achieved_objective(self) -> ProgressDecision:
-        if self.state is ProgressState.OBJECTIVE_ACHIEVED and not self.evidence_ids:
-            raise ValueError("OBJECTIVE_ACHIEVED requires at least one evidence ID")
+    def validate_state_invariants(self) -> ProgressDecision:
+        if len(set(self.evidence_ids)) != len(self.evidence_ids):
+            raise ValueError("evidence IDs must be unique")
+        if self.state is ProgressState.OBJECTIVE_ACHIEVED:
+            if self.stage_reached is not AttackStage.EFFECT:
+                raise ValueError("OBJECTIVE_ACHIEVED requires EFFECT")
+            if not self.evidence_ids:
+                raise ValueError("OBJECTIVE_ACHIEVED requires at least one evidence ID")
+        if self.state is ProgressState.CONTINUE and self.stage_reached is AttackStage.EFFECT:
+            raise ValueError("CONTINUE cannot use EFFECT")
+        if self.state is ProgressState.INVALID_RUN and self.stage_reached is not AttackStage.NONE:
+            raise ValueError("INVALID_RUN requires NONE")
+        if (
+            self.state is ProgressState.TERMINAL_BLOCKED
+            and self.stage_reached is AttackStage.EFFECT
+        ):
+            raise ValueError("TERMINAL_BLOCKED cannot use EFFECT")
         return self
 
     @property

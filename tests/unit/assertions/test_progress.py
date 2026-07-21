@@ -57,6 +57,67 @@ def test_objective_achieved_requires_environment_evidence() -> None:
         )
 
 
+@pytest.mark.parametrize(
+    ("state", "stage", "evidence_ids", "message"),
+    [
+        (
+            ProgressState.OBJECTIVE_ACHIEVED,
+            AttackStage.EXECUTED,
+            ("receiver-event-1",),
+            "OBJECTIVE_ACHIEVED requires EFFECT",
+        ),
+        (
+            ProgressState.CONTINUE,
+            AttackStage.EFFECT,
+            (),
+            "CONTINUE cannot use EFFECT",
+        ),
+        (
+            ProgressState.INVALID_RUN,
+            AttackStage.DELIVERED,
+            (),
+            "INVALID_RUN requires NONE",
+        ),
+        (
+            ProgressState.TERMINAL_BLOCKED,
+            AttackStage.EFFECT,
+            (),
+            "TERMINAL_BLOCKED cannot use EFFECT",
+        ),
+        (
+            ProgressState.CONTINUE,
+            AttackStage.DELIVERED,
+            ("event-1", "event-1"),
+            "evidence IDs must be unique",
+        ),
+    ],
+)
+def test_progress_decision_rejects_inconsistent_state(
+    state: ProgressState,
+    stage: AttackStage,
+    evidence_ids: tuple[str, ...],
+    message: str,
+) -> None:
+    with pytest.raises(ValidationError, match=message):
+        ProgressDecision(
+            run_id="run-1",
+            state=state,
+            stage_reached=stage,
+            evidence_ids=evidence_ids,
+        )
+
+
+def test_terminal_blocked_allows_late_block_after_execution() -> None:
+    decision = ProgressDecision(
+        run_id="run-1",
+        state=ProgressState.TERMINAL_BLOCKED,
+        stage_reached=AttackStage.EXECUTED,
+        evidence_ids=("file-read-event-1",),
+    )
+
+    assert decision.stage_reached is AttackStage.EXECUTED
+
+
 def test_progress_decision_round_trips_complete_project_state() -> None:
     decision = ProgressDecision(
         run_id="run-1",

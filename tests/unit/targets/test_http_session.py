@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import asyncio
 
-from pydantic import JsonValue
+import pytest
+from pydantic import JsonValue, ValidationError
 
 from agentsec_eval.domain import (
     AttackCandidate,
@@ -11,7 +12,7 @@ from agentsec_eval.domain import (
     ExecutionScenarioSpec,
     TargetConfiguration,
 )
-from agentsec_eval.targets import JsonHttpTargetAdapter, TargetToolCall
+from agentsec_eval.targets import JsonHttpTargetAdapter, TargetToolCall, TargetTurnResult
 
 
 class RecordingTransport:
@@ -144,3 +145,99 @@ def test_target_session_preserves_reported_effect_path() -> None:
     result = asyncio.run(session.send("three"))
 
     assert result.effect_path == "/effects/session-001.json"
+
+
+@pytest.mark.parametrize(
+    ("model", "payload"),
+    [
+        (
+            TargetToolCall,
+            {
+                "call_id": "tool-001",
+                "name": "read_file",
+                "arguments": {},
+                "result": None,
+                "unexpected": True,
+            },
+        ),
+        (
+            TargetTurnResult,
+            {
+                "session_id": "session-001",
+                "turn": 1,
+                "response": "response",
+                "unexpected": True,
+            },
+        ),
+    ],
+)
+def test_target_results_forbid_unknown_fields(
+    model: type[TargetToolCall] | type[TargetTurnResult],
+    payload: dict[str, JsonValue],
+) -> None:
+    with pytest.raises(ValidationError, match="extra_forbidden"):
+        model.model_validate(payload)
+
+
+@pytest.mark.parametrize(
+    ("model", "payload"),
+    [
+        (
+            TargetToolCall,
+            {"call_id": " ", "name": "read_file", "arguments": {}, "result": None},
+        ),
+        (
+            TargetToolCall,
+            {"call_id": "tool-001", "name": " ", "arguments": {}, "result": None},
+        ),
+        (
+            TargetTurnResult,
+            {"session_id": " ", "turn": 1, "response": "response"},
+        ),
+    ],
+)
+def test_target_results_reject_blank_identifiers(
+    model: type[TargetToolCall] | type[TargetTurnResult],
+    payload: dict[str, JsonValue],
+) -> None:
+    with pytest.raises(ValidationError, match="string_too_short"):
+        model.model_validate(payload)
+
+
+def test_target_adapter_rejects_unknown_and_blank_open_session_fields() -> None:
+    extra_transport = RecordingTransport([{"session_id": "session-001", "unexpected": True}])
+    blank_transport = RecordingTransport([{"session_id": " "}])
+
+    with pytest.raises(ValidationError, match="extra_forbidden"):
+        asyncio.run(JsonHttpTargetAdapter(extra_transport).open_session(make_run_spec()))
+    with pytest.raises(ValidationError, match="string_too_short"):
+        asyncio.run(JsonHttpTargetAdapter(blank_transport).open_session(make_run_spec()))
+
+
+def test_target_session_rejects_response_for_another_session() -> None:
+    transport = RecordingTransport(
+        [
+            {"session_id": "session-001"},
+            {"session_id": "session-other", "turn": 1, "response": "stale response"},
+        ]
+    )
+    session = asyncio.run(JsonHttpTargetAdapter(transport).open_session(make_run_spec()))
+
+    with pytest.raises(ValueError, match="active Session"):
+        asyncio.run(session.send("one"))
+
+
+@pytest.mark.parametrize("turns", [(1, 1), (2, 1)])
+def test_target_session_rejects_non_increasing_turns(turns: tuple[int, int]) -> None:
+    transport = RecordingTransport(
+        [
+            {"session_id": "session-001"},
+            {"session_id": "session-001", "turn": turns[0], "response": "first"},
+            {"session_id": "session-001", "turn": turns[1], "response": "stale"},
+        ]
+    )
+    session = asyncio.run(JsonHttpTargetAdapter(transport).open_session(make_run_spec()))
+    asyncio.run(session.send("one"))
+
+    with pytest.raises(ValueError, match="strictly increase"):
+        asyncio.run(session.send("two"))

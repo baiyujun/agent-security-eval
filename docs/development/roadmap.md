@@ -3,9 +3,16 @@
 The milestones are ordered to validate execution and assertion boundaries before adding adaptive
 fuzzing complexity.
 
+## M0: Validation phase complete
+
+**Status: completed.** M0-A, M0-B, and M0-C are merged and validated. Together they establish the
+bounded Inspect execution, assertion-backed progress, and adaptive per-Run PyRIT policy boundaries.
+They do not constitute a complete security evaluation product. See the
+[M0 closeout report](m0-closeout.md).
+
 ## M0-A: Inspect AI execution model validation
 
-**Status: validated locally and on Draft PR #4 CI on 2026-07-16.**
+**Status: merged and validated in PR #4 (`69328a6`) on 2026-07-17.**
 
 One project-owned run description now executes as one isolated Inspect Sample and returns correlated
 project-native observations without making Inspect AI the domain model. Automated tests cover two
@@ -18,7 +25,7 @@ engine. The earlier `experiments/inspect-execution-model/` code remains a throwa
 
 ## M0-B: Assertion-backed PyRIT scorer validation
 
-**Status: review corrections validated locally and on Draft PR #7 CI on 2026-07-17.**
+**Status: merged and validated in PR #7 (`d0272e8`) on 2026-07-17.**
 
 A project-owned Progress Oracle now maps four runtime states into a pinned PyRIT `0.14.0`
 `TrueFalseScorer` while preserving the complete decision as versioned metadata. Only objective
@@ -30,9 +37,15 @@ Strategy, policy stopping, PromptTarget, or Final Assertion Engine. See
 
 ## M0-C: PyRIT Attack Policy embedding validation
 
-**Status: not started.**
+**Status: merged and validated in PR #8 (`e954677`) on 2026-07-17.**
 
-Validate PyRIT as an adaptive policy inside one Run without giving it campaign-level control.
+One project-owned policy now uses the pinned PyRIT `0.14.0` red-teaming lifecycle inside a single
+Run while retaining project control of terminal states and turn budget. It adapts one already-open
+Target Session, stops immediately for objective achievement, terminal block, and invalid Runs,
+records trusted per-turn decisions, and keeps final security truth out of `AttackPolicyResult`.
+Concurrent callers are accepted through a serialized in-process PyRIT Memory Scope; this is a
+safety boundary, not a claim of parallel policy execution. See [the M0-C validation
+report](m0-c-pyrit-policy-validation.md).
 
 ## M1: Batch Security Eval
 
