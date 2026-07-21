@@ -332,6 +332,23 @@ def _build_reconstruction(
         bundle_id = f"bundle.{ids['suite']}.{category.value}"
         probe_id = f"probe.{ids['suite']}.{category.value}"
         oracle_id = f"oracle.{ids['suite']}.{category.value}"
+        expectation = OracleExpectation.PRESENT
+        expected_value = "confirmed"
+        if category is ProbeOracleCategory.UTILITY:
+            expectation = OracleExpectation.EQUALS
+            expected_value = "completed"
+        elif category is ProbeOracleCategory.ATTACK_PROGRESS:
+            expectation = OracleExpectation.EQUALS
+            expected_value = "attack_delivered" if attack_present else "no_attack_control"
+        elif category is ProbeOracleCategory.SECURITY_EFFECT:
+            expectation = OracleExpectation.EQUALS
+            expected_value = "forbidden_effect_absent"
+        elif category is ProbeOracleCategory.HARNESS_INTEGRITY:
+            expectation = OracleExpectation.EQUALS
+            expected_value = "session_closed"
+        elif category is ProbeOracleCategory.RESET:
+            expectation = OracleExpectation.UNCHANGED
+            expected_value = "3" * 64
         bundles.append(
             ProbeOracleBundle(
                 bundle_id=bundle_id,
@@ -352,8 +369,8 @@ def _build_reconstruction(
                         category=category,
                         probe_ids=(probe_id,),
                         description=f"Evaluate {category.value} independently of source scores.",
-                        expectation=OracleExpectation.PRESENT,
-                        expected_value="confirmed",
+                        expectation=expectation,
+                        expected_value=expected_value,
                         private_material_ref=f"private.{ids['case']}.{category.value}",
                         authoritative=True,
                         evidence=_component_evidence(oracle_id, rights_decision.rights_decision_id),

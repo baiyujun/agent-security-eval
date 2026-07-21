@@ -9,18 +9,16 @@ from agentsec_eval.reference_catalog import (
     SourceAssetKind,
     UpstreamLedgerRecord,
 )
-from agentsec_eval.scenario_assets import (
+from agentsec_eval.scenario_assets import NativeScenarioPack, ReuseMode, RightsDecision
+from agentsec_eval.scenario_assets.importers import (
     ConversionConfig,
     ImporterRequest,
     ImportResult,
-    NativeScenarioPack,
     ProjectAuthoredReconstruction,
-    ReuseMode,
-    RightsDecision,
     VerifiedSourceCheckout,
     build_import_result,
-    with_computed_digest,
 )
+from agentsec_eval.scenario_assets.validation import with_computed_digest
 
 from .test_models import make_complete_pack
 
