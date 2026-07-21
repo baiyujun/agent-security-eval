@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from pydantic import ValidationError
 
@@ -88,3 +90,13 @@ def test_compile_case_revalidates_model_copy_bypass() -> None:
 
     with pytest.raises((ValidationError, ValueError), match="attack"):
         compile_case(broken_case, pack, run_configuration())
+
+
+def test_compiler_seals_digest_without_placeholder_hashes() -> None:
+    source = Path("src/agentsec_eval/scenario_assets/compiler.py").read_text(encoding="utf-8")
+    pack = with_computed_digest(make_complete_pack())
+
+    compiled = compile_case(pack.cases[0], pack, run_configuration())
+
+    assert '"0" * 64' not in source
+    assert compiled.output_digest == compiled_input_digest(compiled)

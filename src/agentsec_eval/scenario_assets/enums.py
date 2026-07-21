@@ -73,6 +73,12 @@ class Visibility(StrEnum):
     HARNESS_INTERNAL = "harness_internal"
 
 
+class ObservationLevel(StrEnum):
+    BLACK_BOX = "black_box"
+    INSTRUMENTED = "instrumented"
+    ENVIRONMENT_CONFIRMED = "environment_confirmed"
+
+
 class ProbeOracleCategory(StrEnum):
     UTILITY = "utility"
     ATTACK_PROGRESS = "attack_progress"

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import re
 from pathlib import PurePosixPath
 from typing import Annotated, Literal, Self
@@ -17,6 +18,7 @@ from agentsec_eval.scenario_assets.enums import (
     EnvironmentRole,
     FixtureRole,
     LineageTransformation,
+    ObservationLevel,
     OracleExpectation,
     ProbeOracleCategory,
     ResetAction,
@@ -199,27 +201,195 @@ class ScenarioFamily(FrozenModel):
     evidence: ComponentEvidence
 
 
+class WorldSpec(FrozenModel):
+    world_id: AssetId
+    description: StrictText
+    environment_role_requirements: tuple[EnvironmentRole, ...]
+    fixture_role_requirements: tuple[FixtureRole, ...]
+    minimum_observation_level: ObservationLevel
+    trust_boundary: StrictText
+
+    @model_validator(mode="after")
+    def validate_world(self) -> Self:
+        if not self.environment_role_requirements or not self.fixture_role_requirements:
+            raise ValueError("world requires environment and fixture roles")
+        _require_unique(self.environment_role_requirements, "environment_role_requirements")
+        _require_unique(self.fixture_role_requirements, "fixture_role_requirements")
+        return self
+
+
+class NormalTaskSpec(FrozenModel):
+    normal_task_spec_id: AssetId
+    legitimate_goal: StrictText
+    input_kind: AssetId
+    required_read_refs: tuple[AssetId, ...]
+    allowed_output_refs: tuple[AssetId, ...]
+
+    @model_validator(mode="after")
+    def validate_normal_task_spec(self) -> Self:
+        if not self.required_read_refs or not self.allowed_output_refs:
+            raise ValueError("normal task spec requires read and output boundaries")
+        _require_unique(self.required_read_refs, "required_read_refs")
+        _require_unique(self.allowed_output_refs, "allowed_output_refs")
+        return self
+
+
+class ThreatModel(FrozenModel):
+    threat_model_id: AssetId
+    attacker_origin: Literal["user", "external_content", "tool_output", "agent_self"]
+    attacker_knowledge: Literal["black_box", "gray_box", "white_box"]
+    target_feedback_access: bool
+    multi_turn_allowed: bool
+    description: StrictText
+
+
+class AttackSurface(FrozenModel):
+    entry_points: tuple[EntryPoint, ...]
+    insertion_target_kinds: tuple[AssetId, ...]
+
+    @model_validator(mode="after")
+    def validate_attack_surface(self) -> Self:
+        _require_unique(self.entry_points, "entry_points")
+        _require_unique(self.insertion_target_kinds, "insertion_target_kinds")
+        return self
+
+
+class ToolAndPermissionProfile(FrozenModel):
+    authorization_context_id: AssetId
+    required_capability_ids: tuple[AssetId, ...]
+    forbidden_capability_ids: tuple[AssetId, ...]
+    approval_required_capability_ids: tuple[AssetId, ...]
+
+    @model_validator(mode="after")
+    def validate_profile(self) -> Self:
+        for field_name in (
+            "required_capability_ids",
+            "forbidden_capability_ids",
+            "approval_required_capability_ids",
+        ):
+            _require_unique(getattr(self, field_name), field_name)
+        if set(self.required_capability_ids) & set(self.forbidden_capability_ids):
+            raise ValueError("required and forbidden profile capabilities must be disjoint")
+        return self
+
+
+class SecurityInvariant(FrozenModel):
+    invariant_id: AssetId
+    description: StrictText
+    protected_asset_refs: tuple[AssetId, ...]
+    forbidden_effect_refs: tuple[AssetId, ...]
+
+    @model_validator(mode="after")
+    def validate_invariant(self) -> Self:
+        if not self.protected_asset_refs or not self.forbidden_effect_refs:
+            raise ValueError("security invariant requires protected assets and forbidden effects")
+        _require_unique(self.protected_asset_refs, "protected_asset_refs")
+        _require_unique(self.forbidden_effect_refs, "forbidden_effect_refs")
+        return self
+
+
+class TaskOracleSpec(FrozenModel):
+    required_probe_categories: tuple[ProbeOracleCategory, ...]
+    authoritative_evidence_required: bool
+
+    @model_validator(mode="after")
+    def validate_task_oracle_spec(self) -> Self:
+        if not self.required_probe_categories:
+            raise ValueError("task oracle spec requires probe categories")
+        _require_unique(self.required_probe_categories, "required_probe_categories")
+        return self
+
+
+class SecurityOracleSpec(FrozenModel):
+    required_probe_categories: tuple[ProbeOracleCategory, ...]
+    environment_effect_evidence_required: bool
+
+    @model_validator(mode="after")
+    def validate_security_oracle_spec(self) -> Self:
+        if not self.required_probe_categories:
+            raise ValueError("security oracle spec requires probe categories")
+        _require_unique(self.required_probe_categories, "required_probe_categories")
+        return self
+
+
+class ResetSpec(FrozenModel):
+    reset_required: bool
+    mutable_resource_kinds: tuple[AssetId, ...]
+    post_reset_verification_required: bool
+
+    @model_validator(mode="after")
+    def validate_reset_spec(self) -> Self:
+        if self.reset_required and not self.mutable_resource_kinds:
+            raise ValueError("required reset must declare mutable resource kinds")
+        _require_unique(self.mutable_resource_kinds, "mutable_resource_kinds")
+        return self
+
+
+class CaseSchema(FrozenModel):
+    allowed_variants: tuple[ScenarioVariant, ...]
+    required_fixture_roles: tuple[FixtureRole, ...]
+    attack_variant_required_for_attacked_case: bool
+
+    @model_validator(mode="after")
+    def validate_case_schema(self) -> Self:
+        if not self.allowed_variants or not self.required_fixture_roles:
+            raise ValueError("case schema requires variants and fixture roles")
+        _require_unique(self.allowed_variants, "allowed_variants")
+        _require_unique(self.required_fixture_roles, "required_fixture_roles")
+        return self
+
+
 class BaseScenario(FrozenModel):
     scenario_id: AssetId
     family_id: AssetId
     title: StrictText
-    legitimate_goal: StrictText
-    threat_model: StrictText
-    attacker_controlled_channels: tuple[EntryPoint, ...]
-    authorization_context_id: AssetId
-    environment_role_requirements: tuple[EnvironmentRole, ...]
-    required_probe_categories: tuple[ProbeOracleCategory, ...]
-    reset_required: bool
+    world: WorldSpec
+    normal_task_spec: NormalTaskSpec
+    threat_model: ThreatModel
+    attack_surface: AttackSurface
+    tool_and_permission_profile: ToolAndPermissionProfile
+    security_invariants: tuple[SecurityInvariant, ...]
+    task_oracle_spec: TaskOracleSpec
+    security_oracle_spec: SecurityOracleSpec
+    reset_spec: ResetSpec
+    case_schema: CaseSchema
     evidence: ComponentEvidence
 
     @model_validator(mode="after")
     def validate_base(self) -> Self:
-        if not self.environment_role_requirements or not self.required_probe_categories:
-            raise ValueError("base scenario requires environment roles and probe categories")
-        _require_unique(self.attacker_controlled_channels, "attacker_controlled_channels")
-        _require_unique(self.environment_role_requirements, "environment_role_requirements")
-        _require_unique(self.required_probe_categories, "required_probe_categories")
+        if not self.security_invariants:
+            raise ValueError("base scenario requires security invariants")
+        _require_unique(tuple(item.invariant_id for item in self.security_invariants), "invariants")
         return self
+
+    @property
+    def legitimate_goal(self) -> str:
+        return self.normal_task_spec.legitimate_goal
+
+    @property
+    def attacker_controlled_channels(self) -> tuple[EntryPoint, ...]:
+        return self.attack_surface.entry_points
+
+    @property
+    def authorization_context_id(self) -> str:
+        return self.tool_and_permission_profile.authorization_context_id
+
+    @property
+    def environment_role_requirements(self) -> tuple[EnvironmentRole, ...]:
+        return self.world.environment_role_requirements
+
+    @property
+    def required_probe_categories(self) -> tuple[ProbeOracleCategory, ...]:
+        required = set(self.task_oracle_spec.required_probe_categories) | set(
+            self.security_oracle_spec.required_probe_categories
+        )
+        if self.reset_spec.reset_required:
+            required |= {ProbeOracleCategory.RESET, ProbeOracleCategory.REPRODUCIBILITY}
+        return tuple(category for category in ProbeOracleCategory if category in required)
+
+    @property
+    def reset_required(self) -> bool:
+        return self.reset_spec.reset_required
 
 
 class NormalTask(FrozenModel):
@@ -266,6 +436,29 @@ class AttackSeed(FrozenModel):
     content_digest: Sha256Digest
     evidence: ComponentEvidence
 
+    @model_validator(mode="after")
+    def validate_content_digest(self) -> Self:
+        if hashlib.sha256(self.content.encode("utf-8")).hexdigest() != self.content_digest:
+            raise ValueError("content_digest must match attack seed content")
+        return self
+
+
+class AttackVariant(FrozenModel):
+    variant_id: AssetId
+    seed_id: AssetId
+    candidate_id: AssetId
+    content: StrictText
+    content_digest: Sha256Digest
+    transformation: StrictText
+    deterministic_seed: int
+    evidence: ComponentEvidence
+
+    @model_validator(mode="after")
+    def validate_variant_content(self) -> Self:
+        if hashlib.sha256(self.content.encode("utf-8")).hexdigest() != self.content_digest:
+            raise ValueError("content_digest must match attack variant content")
+        return self
+
 
 class AttackPlacement(FrozenModel):
     placement_id: AssetId
@@ -280,12 +473,19 @@ class AttackConfiguration(FrozenModel):
     attack_present: bool
     objective_id: AssetId | None = None
     seed_id: AssetId | None = None
+    variant_id: AssetId | None = None
     candidate_id: AssetId | None = None
     placement_id: AssetId | None = None
 
     @model_validator(mode="after")
     def validate_attack_state(self) -> Self:
-        references = (self.objective_id, self.seed_id, self.candidate_id, self.placement_id)
+        references = (
+            self.objective_id,
+            self.seed_id,
+            self.variant_id,
+            self.candidate_id,
+            self.placement_id,
+        )
         if self.attack_present and any(value is None for value in references):
             raise ValueError("attacked case requires complete attack references")
         if not self.attack_present and any(value is not None for value in references):
@@ -474,6 +674,12 @@ class ResetContract(FrozenModel):
         return self
 
 
+class ExpectedOracleResult(FrozenModel):
+    user_task_completed: bool
+    security_failure: bool | None
+    objective_effect_achieved: bool | None
+
+
 class ScenarioCase(FrozenModel):
     case_id: AssetId
     case_version: SemanticVersion
@@ -482,25 +688,89 @@ class ScenarioCase(FrozenModel):
     normal_task_id: AssetId
     attack: AttackConfiguration
     environment_id: AssetId
-    fixture_ids: tuple[AssetId, ...]
+    initial_fixture_ids: tuple[AssetId, ...]
+    user_task_input: StrictText
     authorization_context_id: AssetId
     capability_requirements: CapabilityRequirements
     oracle_suite_id: AssetId
     reset_contract_id: AssetId
+    expected_oracle_result: ExpectedOracleResult
     evidence: ComponentEvidence
     review_state: ReviewState
 
     @model_validator(mode="after")
     def validate_case_state(self) -> Self:
-        if not self.fixture_ids:
+        if not self.initial_fixture_ids:
             raise ValueError("scenario case requires at least one agent-visible fixture")
-        _require_unique(self.fixture_ids, "fixture_ids")
+        _require_unique(self.initial_fixture_ids, "initial_fixture_ids")
         if self.attack.attack_present != (self.variant is ScenarioVariant.ATTACKED):
             raise ValueError("case variant and attack presence must agree")
         return self
 
+    @property
+    def fixture_ids(self) -> tuple[AssetId, ...]:
+        return self.initial_fixture_ids
 
-class NativeScenarioPack(FrozenModel):
+
+class DockerEnvironmentDeclaration(FrozenModel):
+    docker_environment_id: AssetId
+    environment_id: AssetId
+    dockerfile_path: RelativePosixPath
+    dockerfile_digest: Sha256Digest
+    compose_path: RelativePosixPath | None = None
+    compose_digest: Sha256Digest | None = None
+    build_context_digest: Sha256Digest
+    evidence: ComponentEvidence
+
+    @model_validator(mode="after")
+    def validate_docker_paths(self) -> Self:
+        if not self.dockerfile_path.startswith("docker/"):
+            raise ValueError("dockerfile_path must be located under docker/")
+        if (self.compose_path is None) != (self.compose_digest is None):
+            raise ValueError("compose_path and compose_digest must be present together")
+        if self.compose_path is not None and not self.compose_path.startswith("docker/"):
+            raise ValueError("compose_path must be located under docker/")
+        return self
+
+
+class ToolServiceDeclaration(FrozenModel):
+    tool_service_id: AssetId
+    service_kind: Literal["tool", "mock_service"]
+    capability_ids: tuple[AssetId, ...]
+    interface_path: RelativePosixPath
+    content_digest: Sha256Digest
+    visibility: Visibility
+    evidence: ComponentEvidence
+
+    @model_validator(mode="after")
+    def validate_tool_service(self) -> Self:
+        if not self.capability_ids:
+            raise ValueError("tool/service declaration requires capabilities")
+        _require_unique(self.capability_ids, "capability_ids")
+        if not self.interface_path.startswith("tools/"):
+            raise ValueError("tool/service interface must be located under tools/")
+        return self
+
+
+class PackTestDefinition(FrozenModel):
+    pack_test_id: AssetId
+    test_path: RelativePosixPath
+    content_digest: Sha256Digest
+    verifies_component_ids: tuple[AssetId, ...]
+    visibility: Literal[Visibility.HARNESS_INTERNAL]
+    evidence: ComponentEvidence
+
+    @model_validator(mode="after")
+    def validate_pack_test(self) -> Self:
+        if not self.test_path.startswith("tests/"):
+            raise ValueError("pack test must be located under tests/")
+        if not self.verifies_component_ids:
+            raise ValueError("pack test must declare verified components")
+        _require_unique(self.verifies_component_ids, "verifies_component_ids")
+        return self
+
+
+class ExecutableScenarioPack(FrozenModel):
     schema_version: SemanticVersion
     pack_id: AssetId
     pack_version: SemanticVersion
@@ -510,6 +780,7 @@ class NativeScenarioPack(FrozenModel):
     normal_tasks: tuple[NormalTask, ...]
     attack_objectives: tuple[AttackObjective, ...]
     attack_seeds: tuple[AttackSeed, ...]
+    attack_variants: tuple[AttackVariant, ...]
     attack_placements: tuple[AttackPlacement, ...]
     environments: tuple[EnvironmentDefinition, ...]
     fixtures: tuple[FixtureDefinition, ...]
@@ -517,12 +788,15 @@ class NativeScenarioPack(FrozenModel):
     authorization_contexts: tuple[AuthorizationContext, ...]
     oracle_suites: tuple[OracleSuite, ...]
     reset_contracts: tuple[ResetContract, ...]
+    docker_environments: tuple[DockerEnvironmentDeclaration, ...]
+    tool_services: tuple[ToolServiceDeclaration, ...]
+    pack_tests: tuple[PackTestDefinition, ...]
     provenance: tuple[SourceProvenance, ...]
     rights_decisions: tuple[RightsDecision, ...]
     field_lineage: tuple[FieldLineage, ...]
     conversion_losses: tuple[ConversionLoss, ...]
     review_state: ReviewState
-    output_digest: Sha256Digest
+    output_digest: Sha256Digest | None
 
     @model_validator(mode="after")
     def validate_required_collections(self) -> Self:
@@ -536,6 +810,9 @@ class NativeScenarioPack(FrozenModel):
             self.authorization_contexts,
             self.oracle_suites,
             self.reset_contracts,
+            self.docker_environments,
+            self.tool_services,
+            self.pack_tests,
             self.provenance,
             self.rights_decisions,
             self.field_lineage,
@@ -543,3 +820,6 @@ class NativeScenarioPack(FrozenModel):
         if any(not collection for collection in required):
             raise ValueError("native scenario pack is missing a required component collection")
         return self
+
+
+NativeScenarioPack = ExecutableScenarioPack

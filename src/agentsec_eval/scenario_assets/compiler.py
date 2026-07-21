@@ -20,7 +20,7 @@ from agentsec_eval.scenario_assets.models import (
     NativeScenarioPack,
     ScenarioCase,
 )
-from agentsec_eval.scenario_assets.validation import validate_pack
+from agentsec_eval.scenario_assets.validation import validate_pack_for_execution
 
 
 class RunConfiguration(FrozenModel):
@@ -48,7 +48,7 @@ class CompiledRunInput(FrozenModel):
     execution_spec: ExecutionRunSpec
     source_provenance_ids: tuple[AssetId, ...]
     private_oracle_material_refs: tuple[AssetId, ...]
-    output_digest: str
+    output_digest: str | None
 
 
 def compiled_input_digest(compiled: CompiledRunInput) -> str:
@@ -75,7 +75,7 @@ def compile_case(
 ) -> CompiledRunInput:
     """Compile one reviewed native case without loading an upstream package."""
 
-    validated_pack = validate_pack(pack)
+    validated_pack = validate_pack_for_execution(pack)
     validated_case = ScenarioCase.model_validate(case.model_dump(mode="python"))
     case_by_id = {candidate.case_id: candidate for candidate in validated_pack.cases}
     if case_by_id.get(validated_case.case_id) != validated_case:
@@ -109,20 +109,21 @@ def compile_case(
     attack_objective_id: str | None
     if validated_case.attack.attack_present:
         assert validated_case.attack.seed_id is not None
+        assert validated_case.attack.variant_id is not None
         assert validated_case.attack.candidate_id is not None
         assert validated_case.attack.objective_id is not None
-        seed = next(
-            seed
-            for seed in validated_pack.attack_seeds
-            if seed.seed_id == validated_case.attack.seed_id
+        variant = next(
+            variant
+            for variant in validated_pack.attack_variants
+            if variant.variant_id == validated_case.attack.variant_id
         )
         placement = next(
             placement
             for placement in validated_pack.attack_placements
             if placement.placement_id == validated_case.attack.placement_id
         )
-        candidate_id = seed.candidate_id
-        candidate_content = seed.content if placement.agent_visible else ""
+        candidate_id = variant.candidate_id
+        candidate_content = variant.content if placement.agent_visible else ""
         attack_objective_id = validated_case.attack.objective_id
     else:
         candidate_id = f"{validated_case.case_id}.no-attack"
@@ -160,7 +161,7 @@ def compile_case(
         execution_spec=execution_spec,
         source_provenance_ids=tuple(item.provenance_id for item in validated_pack.provenance),
         private_oracle_material_refs=tuple(private_oracles),
-        output_digest="0" * 64,
+        output_digest=None,
     )
     return candidate.model_copy(update={"output_digest": compiled_input_digest(candidate)})
 

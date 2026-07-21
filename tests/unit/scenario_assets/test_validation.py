@@ -4,11 +4,16 @@ import pytest
 from pydantic import ValidationError
 
 from agentsec_eval.scenario_assets import (
+    FixtureRole,
     NativeScenarioPack,
+    ScenarioVariant,
     pack_content_digest,
     validate_pack,
+    validate_pack_for_execution,
     with_computed_digest,
 )
+from agentsec_eval.scenario_assets.enums import ReviewStatus
+from agentsec_eval.scenario_assets.models import ReviewState
 
 from .test_models import make_complete_pack
 
@@ -72,7 +77,7 @@ def test_validate_pack_rejects_private_fixture_in_agent_visible_case_inputs() ->
     pack = make_complete_pack()
     private_fixture_id = "fixture.private-verifier"
     case = pack.cases[0].model_copy(
-        update={"fixture_ids": (*pack.cases[0].fixture_ids, private_fixture_id)}
+        update={"initial_fixture_ids": (*pack.cases[0].initial_fixture_ids, private_fixture_id)}
     )
     broken = pack.model_copy(update={"cases": (case,)})
     broken = broken.model_copy(update={"output_digest": pack_content_digest(broken)})
@@ -115,4 +120,79 @@ def test_validate_pack_rejects_duplicate_component_identity() -> None:
     broken = broken.model_copy(update={"output_digest": pack_content_digest(broken)})
 
     with pytest.raises(ValueError, match="duplicate case_id"):
+        validate_pack(broken)
+
+
+def test_structural_validation_loads_proposed_pack_but_execution_requires_approval() -> None:
+    proposed_review = ReviewState(
+        status=ReviewStatus.PROPOSED,
+        notes="Generated for independent rights and security review.",
+    )
+    pack = make_complete_pack()
+    proposed_case = pack.cases[0].model_copy(update={"review_state": proposed_review})
+    proposed = pack.model_copy(update={"review_state": proposed_review, "cases": (proposed_case,)})
+    proposed = proposed.model_copy(update={"output_digest": pack_content_digest(proposed)})
+
+    assert validate_pack(proposed).review_state.status is ReviewStatus.PROPOSED
+    with pytest.raises(ValueError, match="approved review"):
+        validate_pack_for_execution(proposed)
+
+
+def test_unsealed_pack_uses_null_digest_until_content_is_sealed() -> None:
+    values = make_complete_pack().model_dump(mode="python")
+    values["output_digest"] = None
+
+    unsealed = NativeScenarioPack.model_validate(values)
+    sealed = with_computed_digest(unsealed)
+
+    assert unsealed.output_digest is None
+    assert sealed.output_digest == pack_content_digest(sealed)
+    with pytest.raises(ValueError, match="output_digest"):
+        validate_pack(unsealed)
+
+
+def test_validate_pack_enforces_base_case_schema_fixture_roles() -> None:
+    pack = make_complete_pack()
+    base = pack.base_scenarios[0]
+    case_schema = base.case_schema.model_copy(
+        update={
+            "required_fixture_roles": (
+                *base.case_schema.required_fixture_roles,
+                FixtureRole.ATTACK_CHANNEL,
+            )
+        }
+    )
+    broken_base = base.model_copy(update={"case_schema": case_schema})
+    broken = pack.model_copy(update={"base_scenarios": (broken_base,)})
+    broken = broken.model_copy(update={"output_digest": pack_content_digest(broken)})
+
+    with pytest.raises(ValueError, match="fixture role"):
+        validate_pack(broken)
+
+
+def test_validate_pack_enforces_base_case_schema_variants() -> None:
+    pack = make_complete_pack()
+    base = pack.base_scenarios[0]
+    case_schema = base.case_schema.model_copy(
+        update={"allowed_variants": (ScenarioVariant.BENIGN_CONTROL,)}
+    )
+    broken_base = base.model_copy(update={"case_schema": case_schema})
+    broken = pack.model_copy(update={"base_scenarios": (broken_base,)})
+    broken = broken.model_copy(update={"output_digest": pack_content_digest(broken)})
+
+    with pytest.raises(ValueError, match="variant"):
+        validate_pack(broken)
+
+
+def test_validate_pack_enforces_base_capability_profile() -> None:
+    pack = make_complete_pack()
+    base = pack.base_scenarios[0]
+    profile = base.tool_and_permission_profile.model_copy(
+        update={"required_capability_ids": ("cap.shell-missing",)}
+    )
+    broken_base = base.model_copy(update={"tool_and_permission_profile": profile})
+    broken = pack.model_copy(update={"base_scenarios": (broken_base,)})
+    broken = broken.model_copy(update={"output_digest": pack_content_digest(broken)})
+
+    with pytest.raises(ValueError, match="profile capability"):
         validate_pack(broken)

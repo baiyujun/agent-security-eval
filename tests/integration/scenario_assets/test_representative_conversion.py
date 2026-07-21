@@ -7,10 +7,6 @@ import sys
 import pytest
 
 from agentsec_eval.domain import ExecutionBudget, ExecutionRunSpec, TargetConfiguration
-from agentsec_eval.execution.inspect_backend import (
-    execution_run_spec_from_metadata,
-    execution_run_spec_to_sample,
-)
 from agentsec_eval.reference_catalog import (
     NativeConversionDisposition,
     RawReuseDisposition,
@@ -20,11 +16,15 @@ from agentsec_eval.reference_catalog import (
 )
 from agentsec_eval.scenario_assets import (
     CompiledRunInput,
+    ExecutableScenarioPack,
     ReuseMode,
+    ReviewState,
+    ReviewStatus,
     RightsDecision,
     RunConfiguration,
     compile_case,
     validate_pack,
+    with_computed_digest,
 )
 from agentsec_eval.scenario_assets import runtime as contract_runtime
 from agentsec_eval.scenario_assets.importers import ConversionConfig, VerifiedSourceCheckout
@@ -166,7 +166,7 @@ def representative_records() -> tuple[UpstreamLedgerRecord, ...]:
     representative_records(),
     ids=lambda item: item.source_record_key,
 )
-def test_representative_records_convert_end_to_end_without_upstream_packages(
+def test_representative_records_build_proposed_contract_objects_without_upstream_packages(
     source_record: UpstreamLedgerRecord,
 ) -> None:
     request = make_representative_request(
@@ -183,31 +183,28 @@ def test_representative_records_convert_end_to_end_without_upstream_packages(
 
     result = importer.import_record(request)
     pack = validate_pack(result.pack)
-    compiled = compile_case(
-        pack.cases[0],
-        pack,
-        RunConfiguration(
-            run_id=f"run.{pack.cases[0].case_id}",
-            target=TargetConfiguration(
-                target_id="target.fixture",
-                adapter="fixture",
-                version="1.0",
-            ),
-            budget=ExecutionBudget(max_turns=4, timeout_seconds=30),
-            repetition_seed=7,
-            granted_capability_ids=("cap.filesystem-read", "cap.filesystem-write"),
-        ),
-    )
-    sample = execution_run_spec_to_sample(compiled.execution_spec)
-    metadata = sample.metadata
-    assert metadata is not None
-    restored = execution_run_spec_from_metadata(metadata)
 
     assert result.output_digest == pack.output_digest
     expected_case_id = f"case.{source_record.source_project}.{source_record.source_record_key}"
-    assert compiled.case_id == expected_case_id
-    assert isinstance(restored, ExecutionRunSpec)
-    assert restored == compiled.execution_spec
+    assert pack.cases[0].case_id == expected_case_id
+    assert pack.review_state.status is ReviewStatus.PROPOSED
+    assert pack.cases[0].review_state.status is ReviewStatus.PROPOSED
+    with pytest.raises(ValueError, match="approved review"):
+        compile_case(
+            pack.cases[0],
+            pack,
+            RunConfiguration(
+                run_id=f"run.{pack.cases[0].case_id}",
+                target=TargetConfiguration(
+                    target_id="target.fixture",
+                    adapter="fixture",
+                    version="1.0",
+                ),
+                budget=ExecutionBudget(max_turns=4, timeout_seconds=30),
+                repetition_seed=7,
+                granted_capability_ids=("cap.filesystem-read", "cap.filesystem-write"),
+            ),
+        )
     assert "inspect_evals" not in sys.modules
     assert "saber" not in sys.modules
 
@@ -288,6 +285,20 @@ class RecordingEnvironment:
         return hashlib.sha256(reset_state).hexdigest()
 
 
+def approve_contract_fixture(pack: ExecutableScenarioPack) -> ExecutableScenarioPack:
+    validated = validate_pack(pack)
+    review = ReviewState(
+        status=ReviewStatus.APPROVED,
+        reviewer="pytest-contract-fixture-only",
+        decision_ref="pytest.contract-fixture-only",
+        notes="Ephemeral approval state used only to exercise compiler contracts.",
+    )
+    cases = tuple(case.model_copy(update={"review_state": review}) for case in validated.cases)
+    return with_computed_digest(
+        validated.model_copy(update={"review_state": review, "cases": cases, "output_digest": None})
+    )
+
+
 @pytest.mark.parametrize(
     "source_record",
     representative_records(),
@@ -307,7 +318,7 @@ def test_representative_cases_exercise_contract_harness_without_formal_outcome(
         if source_record.source_project == "saber"
         else CodeIPIRepresentativeImporter()
     )
-    pack = importer.import_record(request).pack
+    pack = approve_contract_fixture(importer.import_record(request).pack)
     compiled = compile_case(
         pack.cases[0],
         pack,
