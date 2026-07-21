@@ -36,6 +36,7 @@ packages = ["src/agentsec_eval"]
 testpaths = ["tests"]
 addopts = "-ra --strict-markers"
 markers = [
+  "contract: validates internal boundaries without constituting production execution evidence",
   "docker: requires a working local Docker daemon and Docker Compose",
   "integration: exercises multiple project or runtime boundaries",
   "pyrit: requires the optional PyRIT integration dependencies",

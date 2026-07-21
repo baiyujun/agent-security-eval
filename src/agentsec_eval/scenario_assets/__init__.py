@@ -58,14 +58,6 @@ from agentsec_eval.scenario_assets.models import (
     SourceProvenance,
     StrictText,
 )
-from agentsec_eval.scenario_assets.runtime import (
-    NativeExecutionResult,
-    OracleResult,
-    ProbeObservation,
-    ProbeOracleBundleResult,
-    ScenarioEnvironment,
-    execute_compiled_case,
-)
 from agentsec_eval.scenario_assets.validation import (
     pack_content_digest,
     validate_pack,
@@ -99,16 +91,12 @@ __all__ = [
     "FrozenModel",
     "LineageTransformation",
     "NativeScenarioPack",
-    "NativeExecutionResult",
     "NormalTask",
     "OracleDefinition",
     "OracleExpectation",
-    "OracleResult",
     "OracleSuite",
     "ProbeDefinition",
-    "ProbeObservation",
     "ProbeOracleBundle",
-    "ProbeOracleBundleResult",
     "ProbeOracleCategory",
     "RelativePosixPath",
     "ResetAction",
@@ -121,7 +109,6 @@ __all__ = [
     "RunConfiguration",
     "ScenarioCase",
     "ScenarioDomain",
-    "ScenarioEnvironment",
     "ScenarioFamily",
     "ScenarioVariant",
     "Sha256Digest",
@@ -133,5 +120,4 @@ __all__ = [
     "with_computed_digest",
     "compile_case",
     "compiled_input_digest",
-    "execute_compiled_case",
 ]

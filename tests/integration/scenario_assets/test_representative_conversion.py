@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import sys
 
 import pytest
@@ -23,9 +24,9 @@ from agentsec_eval.scenario_assets import (
     RightsDecision,
     RunConfiguration,
     compile_case,
-    execute_compiled_case,
     validate_pack,
 )
+from agentsec_eval.scenario_assets import runtime as contract_runtime
 from agentsec_eval.scenario_assets.importers import ConversionConfig, VerifiedSourceCheckout
 from agentsec_eval.scenario_assets.models import ProbeDefinition, ResetStep
 from agentsec_eval.scenario_assets.representatives import (
@@ -36,6 +37,7 @@ from agentsec_eval.scenario_assets.representatives import (
 from agentsec_eval.targets import TargetTurnResult
 
 COMMIT = "b" * 40
+pytestmark = [pytest.mark.integration, pytest.mark.contract]
 REPOSITORIES = {
     "saber": "https://github.com/sssr-lab/SABER",
     "inspect-evals-codeipi": "https://github.com/UKGovernmentBEIS/inspect_evals",
@@ -276,17 +278,14 @@ class RecordingEnvironment:
         turn_result: TargetTurnResult,
     ) -> str:
         del compiled, turn_result
-        if probe.category.value == "utility":
-            return "completed"
-        if probe.category.value == "security_effect":
-            return "forbidden_effect_absent"
-        raise AssertionError(f"runtime should own {probe.category.value} observation")
+        return f"contract-observation:{probe.probe_id}"
 
     async def apply_reset(self, step: ResetStep) -> None:
         self.reset_steps.append(step)
 
     async def state_digest(self) -> str:
-        return "3" * 64
+        reset_state = "\n".join(step.step_id for step in self.reset_steps).encode()
+        return hashlib.sha256(reset_state).hexdigest()
 
 
 @pytest.mark.parametrize(
@@ -294,7 +293,7 @@ class RecordingEnvironment:
     representative_records(),
     ids=lambda item: f"runtime-{item.source_record_key}",
 )
-def test_representative_cases_execute_all_probe_oracle_and_reset_contracts(
+def test_representative_cases_exercise_contract_harness_without_formal_outcome(
     source_record: UpstreamLedgerRecord,
 ) -> None:
     request = make_representative_request(
@@ -327,10 +326,12 @@ def test_representative_cases_execute_all_probe_oracle_and_reset_contracts(
     adapter = RecordingAdapter()
     environment = RecordingEnvironment()
 
-    result = asyncio.run(execute_compiled_case(compiled, pack, adapter, environment))
+    result = asyncio.run(
+        contract_runtime.exercise_compiled_case_contract(compiled, pack, adapter, environment)
+    )
 
-    assert result.passed is True
-    assert {bundle.category.value for bundle in result.bundle_results} == {
+    assert isinstance(result, contract_runtime.ContractHarnessRecord)
+    assert {observation.category.value for observation in result.observations} == {
         "utility",
         "attack_progress",
         "security_effect",
@@ -338,7 +339,8 @@ def test_representative_cases_execute_all_probe_oracle_and_reset_contracts(
         "reset",
         "reproducibility",
     }
-    assert all(bundle.passed for bundle in result.bundle_results)
+    assert not hasattr(result, "passed")
+    assert not hasattr(result, "security_failure")
     assert len(environment.reset_steps) == 2
     assert adapter.session.closed is True
     assert adapter.session.messages == [compiled.agent_visible_prompt]

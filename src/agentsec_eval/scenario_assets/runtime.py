@@ -1,24 +1,30 @@
-"""Project-owned execution of compiled native scenario cases."""
+"""Contract-test harness for compiled scenario inputs.
+
+This module is intentionally outside the production execution path. Production execution maps
+``ExecutionRunSpec`` to one Inspect ``Sample`` through ``agentsec_eval.execution``. The harness
+below only lets tests exercise Target and environment protocols; it does not adjudicate evidence
+or produce a formal project result.
+"""
 
 from __future__ import annotations
 
 from typing import Protocol
 
-from agentsec_eval.scenario_assets.compiler import (
-    CompiledRunInput,
-    compiled_input_digest,
-)
-from agentsec_eval.scenario_assets.enums import OracleExpectation, ProbeOracleCategory
+from agentsec_eval.scenario_assets.compiler import CompiledRunInput, compiled_input_digest
+from agentsec_eval.scenario_assets.enums import ProbeOracleCategory
 from agentsec_eval.scenario_assets.models import (
     AssetId,
     FrozenModel,
     NativeScenarioPack,
     ProbeDefinition,
     ResetStep,
+    Sha256Digest,
     StrictText,
 )
 from agentsec_eval.scenario_assets.validation import validate_pack
 from agentsec_eval.targets.protocol import TargetAdapter, TargetTurnResult
+
+CONTRACT_TEST_ONLY = True
 
 
 class ScenarioEnvironment(Protocol):
@@ -35,77 +41,31 @@ class ScenarioEnvironment(Protocol):
     async def state_digest(self) -> str: ...
 
 
-class ProbeObservation(FrozenModel):
+class ContractProbeObservation(FrozenModel):
     probe_id: AssetId
     category: ProbeOracleCategory
     value: StrictText
 
 
-class OracleResult(FrozenModel):
-    oracle_id: AssetId
-    category: ProbeOracleCategory
-    passed: bool
-    detail: StrictText
+class ContractHarnessRecord(FrozenModel):
+    """Raw contract-test observations with no formal adjudication semantics."""
 
-
-class ProbeOracleBundleResult(FrozenModel):
-    category: ProbeOracleCategory
-    observations: tuple[ProbeObservation, ...]
-    oracle_results: tuple[OracleResult, ...]
-    passed: bool
-
-
-class NativeExecutionResult(FrozenModel):
     run_id: AssetId
     pack_id: AssetId
     case_id: AssetId
     session_id: AssetId
     target_response: str
-    bundle_results: tuple[ProbeOracleBundleResult, ...]
-    reset_baseline_digest: str
-    passed: bool
+    observations: tuple[ContractProbeObservation, ...]
+    reset_state_digest: Sha256Digest
 
 
-def _runtime_observation(
-    category: ProbeOracleCategory,
-    *,
-    compiled: CompiledRunInput,
-    attack_present: bool,
-    session_closed: bool,
-    reset_digest: str,
-) -> str:
-    if category is ProbeOracleCategory.ATTACK_PROGRESS:
-        return "attack_delivered" if attack_present else "no_attack_control"
-    if category is ProbeOracleCategory.HARNESS_INTEGRITY:
-        return "session_closed" if session_closed else "session_open"
-    if category is ProbeOracleCategory.RESET:
-        return reset_digest
-    if category is ProbeOracleCategory.REPRODUCIBILITY:
-        return compiled_input_digest(compiled)
-    raise ValueError(f"category requires an environment observation: {category.value}")
-
-
-def _evaluate(expectation: OracleExpectation, value: str, expected_value: str) -> bool:
-    if expectation is OracleExpectation.PRESENT:
-        return bool(value)
-    if expectation is OracleExpectation.ABSENT:
-        return not value
-    if expectation is OracleExpectation.EQUALS:
-        return value == expected_value
-    if expectation is OracleExpectation.UNCHANGED:
-        return value == expected_value
-    if expectation is OracleExpectation.ORDERED:
-        return value == expected_value
-    return False
-
-
-async def execute_compiled_case(
+async def exercise_compiled_case_contract(
     compiled: CompiledRunInput,
     pack: NativeScenarioPack,
     target_adapter: TargetAdapter,
     environment: ScenarioEnvironment,
-) -> NativeExecutionResult:
-    """Execute and adjudicate one compiled case under project-owned lifecycle control."""
+) -> ContractHarnessRecord:
+    """Exercise test doubles without claiming production execution or final truth."""
 
     validated_pack = validate_pack(pack)
     validated_compiled = CompiledRunInput.model_validate(compiled.model_dump(mode="python"))
@@ -117,18 +77,30 @@ async def execute_compiled_case(
     case = cases.get(validated_compiled.case_id)
     if case is None or case.case_version != validated_compiled.case_version:
         raise ValueError("compiled case identity/version does not resolve in the supplied pack")
-    if set(validated_compiled.source_provenance_ids) != {
-        provenance.provenance_id for provenance in validated_pack.provenance
-    }:
-        raise ValueError("compiled provenance does not recover the supplied pack provenance")
 
     session = await target_adapter.open_session(validated_compiled.execution_spec)
-    session_closed = False
     try:
         turn_result = await session.send(validated_compiled.agent_visible_prompt)
     finally:
         await session.close()
-        session_closed = True
+
+    suite = next(
+        suite for suite in validated_pack.oracle_suites if suite.suite_id == case.oracle_suite_id
+    )
+    observations: list[ContractProbeObservation] = []
+    for bundle in suite.bundles:
+        for probe in bundle.probes:
+            observations.append(
+                ContractProbeObservation(
+                    probe_id=probe.probe_id,
+                    category=bundle.category,
+                    value=await environment.observe(
+                        probe,
+                        compiled=validated_compiled,
+                        turn_result=turn_result,
+                    ),
+                )
+            )
 
     reset = next(
         contract
@@ -137,88 +109,23 @@ async def execute_compiled_case(
     )
     for step in reset.steps:
         await environment.apply_reset(step)
-    reset_digest = await environment.state_digest()
-    if reset_digest != reset.baseline_digest:
-        raise ValueError("reset did not restore the declared baseline digest")
+    reset_state_digest = await environment.state_digest()
 
-    suite = next(
-        suite for suite in validated_pack.oracle_suites if suite.suite_id == case.oracle_suite_id
-    )
-    bundle_results: list[ProbeOracleBundleResult] = []
-    for bundle in suite.bundles:
-        observations: list[ProbeObservation] = []
-        for probe in bundle.probes:
-            if bundle.category in {
-                ProbeOracleCategory.UTILITY,
-                ProbeOracleCategory.SECURITY_EFFECT,
-            }:
-                value = await environment.observe(
-                    probe,
-                    compiled=validated_compiled,
-                    turn_result=turn_result,
-                )
-            else:
-                value = _runtime_observation(
-                    bundle.category,
-                    compiled=validated_compiled,
-                    attack_present=case.attack.attack_present,
-                    session_closed=session_closed,
-                    reset_digest=reset_digest,
-                )
-            observations.append(
-                ProbeObservation(
-                    probe_id=probe.probe_id,
-                    category=bundle.category,
-                    value=value,
-                )
-            )
-        observations_by_id = {
-            observation.probe_id: observation.value for observation in observations
-        }
-        oracle_results: list[OracleResult] = []
-        for oracle in bundle.oracles:
-            values = tuple(observations_by_id[probe_id] for probe_id in oracle.probe_ids)
-            passed = all(
-                _evaluate(oracle.expectation, value, oracle.expected_value) for value in values
-            )
-            oracle_results.append(
-                OracleResult(
-                    oracle_id=oracle.oracle_id,
-                    category=bundle.category,
-                    passed=passed,
-                    detail=(
-                        "project oracle expectation satisfied"
-                        if passed
-                        else "project oracle expectation failed"
-                    ),
-                )
-            )
-        bundle_results.append(
-            ProbeOracleBundleResult(
-                category=bundle.category,
-                observations=tuple(observations),
-                oracle_results=tuple(oracle_results),
-                passed=all(result.passed for result in oracle_results),
-            )
-        )
-
-    return NativeExecutionResult(
+    return ContractHarnessRecord(
         run_id=validated_compiled.execution_spec.run_id,
         pack_id=validated_pack.pack_id,
         case_id=case.case_id,
         session_id=session.session_id,
         target_response=turn_result.response,
-        bundle_results=tuple(bundle_results),
-        reset_baseline_digest=reset_digest,
-        passed=all(bundle.passed for bundle in bundle_results),
+        observations=tuple(observations),
+        reset_state_digest=reset_state_digest,
     )
 
 
 __all__ = [
-    "NativeExecutionResult",
-    "OracleResult",
-    "ProbeObservation",
-    "ProbeOracleBundleResult",
+    "CONTRACT_TEST_ONLY",
+    "ContractHarnessRecord",
+    "ContractProbeObservation",
     "ScenarioEnvironment",
-    "execute_compiled_case",
+    "exercise_compiled_case_contract",
 ]
