@@ -1,5 +1,11 @@
 """Project-native scenario assets and validation boundary."""
 
+from agentsec_eval.scenario_assets.compiler import (
+    CompiledRunInput,
+    RunConfiguration,
+    compile_case,
+    compiled_input_digest,
+)
 from agentsec_eval.scenario_assets.enums import (
     AttackDeliveryMode,
     CapabilityKind,
@@ -72,6 +78,7 @@ __all__ = [
     "CapabilityProvider",
     "CapabilityRequirements",
     "CommitSha",
+    "CompiledRunInput",
     "ComponentEvidence",
     "ConversionLoss",
     "ConversionLossKind",
@@ -99,6 +106,7 @@ __all__ = [
     "ReviewStatus",
     "ReuseMode",
     "RightsDecision",
+    "RunConfiguration",
     "ScenarioCase",
     "ScenarioDomain",
     "ScenarioFamily",
@@ -110,4 +118,6 @@ __all__ = [
     "pack_content_digest",
     "validate_pack",
     "with_computed_digest",
+    "compile_case",
+    "compiled_input_digest",
 ]
