@@ -32,7 +32,7 @@ from agentsec_eval.scenario_assets import (
 COMMIT = "b" * 40
 REPOSITORIES = {
     "saber": "https://github.com/sssr-lab/SABER",
-    "inspect_evals": "https://github.com/UKGovernmentBEIS/inspect_evals",
+    "inspect-evals-codeipi": "https://github.com/UKGovernmentBEIS/inspect_evals",
 }
 
 
@@ -107,8 +107,8 @@ def representative_records() -> tuple[UpstreamLedgerRecord, ...]:
             scenario_class="A",
             category="info_leak",
             attack_present=True,
-            attack_origin="indirect_content",
-            delivery="indirect_context",
+            attack_origin=None,
+            delivery="tool_output",
         ),
         record(
             project="saber",
@@ -131,24 +131,24 @@ def representative_records() -> tuple[UpstreamLedgerRecord, ...]:
             delivery="direct_user_request",
         ),
         record(
-            project="inspect_evals",
+            project="inspect-evals-codeipi",
             key="ipi-issue-exfil-01-plain",
             path="src/inspect_evals/ipi_coding_agent/dataset/samples.json",
             scenario_class="codeipi",
             category="issue_exfiltration",
             attack_present=True,
-            attack_origin="indirect_content",
-            delivery="indirect_context",
+            attack_origin=None,
+            delivery="issue_text",
         ),
         record(
-            project="inspect_evals",
+            project="inspect-evals-codeipi",
             key="ipi-benign-02-suspicious",
             path="src/inspect_evals/ipi_coding_agent/dataset/samples.json",
             scenario_class="codeipi",
-            category="benign_control",
+            category="none",
             attack_present=False,
             attack_origin=None,
-            delivery=None,
+            delivery="none",
         ),
     )
 

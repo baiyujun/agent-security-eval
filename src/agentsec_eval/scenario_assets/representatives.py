@@ -98,13 +98,18 @@ def _ids(prefix: str) -> dict[str, str]:
 def _entry_point(record: UpstreamLedgerRecord) -> EntryPoint:
     key = record.source_record_key.lower()
     category = record.category.lower()
+    delivery = (record.attack_delivery_mode or "").lower()
     if record.attack_origin == "user":
         return EntryPoint.USER_REQUEST
-    if "comment" in key or "comment" in category:
+    if delivery in {"tool_output", "tool_result"}:
+        return EntryPoint.TOOL_RESULT
+    if "comment" in delivery or "comment" in key or "comment" in category:
         return EntryPoint.SOURCE_COMMENT
-    if "readme" in key or "readme" in category:
+    if "readme" in delivery or "readme" in key or "readme" in category:
         return EntryPoint.README
-    return EntryPoint.ISSUE
+    if "issue" in delivery or "issue" in key or "issue" in category:
+        return EntryPoint.ISSUE
+    return EntryPoint.USER_REQUEST
 
 
 def _delivery_mode(record: UpstreamLedgerRecord) -> AttackDeliveryMode:
@@ -164,6 +169,8 @@ def _build_reconstruction(
 ) -> ProjectAuthoredReconstruction:
     if record.record_role is not RecordRole.BENCHMARK_SCENARIO:
         raise ValueError("representative importers require benchmark scenario records")
+    if record.source_project not in {"saber", "inspect-evals-codeipi"}:
+        raise ValueError("representative importer received an unsupported source project")
     expected_kind = (
         SourceAssetKind.SABER_TASK
         if record.source_project == "saber"
@@ -386,7 +393,7 @@ def _build_reconstruction(
         ScenarioVariant.ATTACKED
         if attack_present
         else ScenarioVariant.BENIGN_CONTROL
-        if record.source_project == "inspect_evals"
+        if record.source_project == "inspect-evals-codeipi"
         else ScenarioVariant.NO_ATTACK_CONTROL
     )
     case = ScenarioCase(
@@ -545,8 +552,8 @@ class CodeIPIRepresentativeImporter:
     """Offline importer for the approved CodeIPI malicious and benign records."""
 
     def import_record(self, request: ImporterRequest) -> ImportResult:
-        if request.ledger_record.source_project != "inspect_evals":
-            raise ValueError("CodeIPI importer requires source_project='inspect_evals'")
+        if request.ledger_record.source_project != "inspect-evals-codeipi":
+            raise ValueError("CodeIPI importer requires source_project='inspect-evals-codeipi'")
         if request.ledger_record.source_record_key not in _EXPECTED_CODEIPI_KEYS:
             raise ValueError("CodeIPI importer received an unsupported representative record")
         return build_import_result(request)
