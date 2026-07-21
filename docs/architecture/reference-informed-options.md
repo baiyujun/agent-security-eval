@@ -1,6 +1,6 @@
 # Reference-Informed Architecture Options
 
-- Status: candidate architecture for review
+- Status: accepted architecture options and follow-up research
 - Date: 2026-07-16
 - Decision state: no package layout, class names, persistent schema, or formal API is frozen
 
@@ -122,7 +122,7 @@ per-Run policy integration. ClawSentry event and trajectory semantics are design
 its Gateway models and concrete adapters are not project import formats or standards. Promptfoo test
 cases remain candidate-generation import formats, not project standards.
 
-## Boundary Decisions Proposed Now
+## Accepted Boundary Decisions
 
 These are responsibility boundaries, not a requested directory tree:
 

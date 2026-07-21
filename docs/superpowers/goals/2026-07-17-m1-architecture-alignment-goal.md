@@ -31,9 +31,8 @@ and architecture terminology must all express that same boundary.
 
 - **Type**: architecture quality and delivery.
 - **Boundary**: migrate the still-valid PR #5 documentation onto latest `main`, reconcile it with
-  merged PR #6, publish the proposed scenario/data-assets v1.1 candidate intended to become
-  canonical after review and merge, update ambiguous ClawSentry and Adapter wording, and establish
-  tracking issues.
+  merged PR #6, publish and accept the scenario/data-assets v1.1 architecture, update ambiguous
+  ClawSentry and Adapter wording, and establish tracking issues.
 - **Non-goals**:
   - No changes under `src/`, `tests/`, `pyproject.toml`, or `.github/workflows/`.
   - No `BaseScenario`, `ScenarioCase`, `CompiledRunInput`, importer, replay harness, registry,
@@ -46,12 +45,13 @@ and architecture terminology must all express that same boundary.
   - Offline importer implementation begins only after that boundary and per-asset rights approval.
   - PyRIT private `_memory` access moves behind a pinned-version compatibility helper later.
 - **Verification rule**: architecture-term scans, link/YAML validation, diff-scope checks, project
-  quality gates, human review, and GitHub CI must all pass.
+  quality gates, structured Codex review, owner acceptance, and GitHub CI must all pass.
 - **Evidence source**: current source contracts, merged PR #6 source locks and asset inventory,
   PR #5 documentation, the v1.0 scenario plan, repository tests, and GitHub review state.
 - **Pass criteria**:
-  - ADR-0002 is `Proposed` and rejects long-lived external Benchmark runtime adapters.
-  - v1.1 remains `Proposed` until explicit architecture acceptance and merge preparation.
+  - ADR-0002 is `Accepted` and rejects long-lived external Benchmark runtime adapters.
+  - v1.1 is `Accepted` after structured Codex review and owner acceptance; canonical activation occurs
+    when the accepted branch merges.
   - v1.1 has no `executable_adapter`, `SaberExternalBenchmarkAdapter`, or
     `InspectEvalsExternalBenchmarkAdapter` production path.
   - `reuse_mode` and `asset_role` carry separate meanings.
@@ -63,7 +63,8 @@ and architecture terminology must all express that same boundary.
   - No production or test files change.
 - **Confidence note**: the runtime and type boundaries are directly observable in current code;
   source provenance is fixed in merged, reviewed YAML and inventory documents.
-- **Judgment owner**: repository reviewers accept ADR-0002 and v1.1; CI verifies mechanical quality.
+- **Judgment owner**: the repository owner accepts ADR-0002 and v1.1 based on the structured Codex
+  review; CI verifies mechanical quality.
 
 ## Baseline State Before Remediation
 
@@ -114,16 +115,16 @@ lifecycle state; delivery status is tracked in PR #11 and issue #10.
 ## Priority Rationale
 
 - Freeze ownership and dependency direction before naming M1 implementation types.
-- Make the proposed v1.1 candidate and ADR agree before any importer or compiler code exists, then
-  activate both only after explicit review and merge preparation.
+- Make the v1.1 architecture and ADR agree before any importer or compiler code exists, then activate
+  both on the accepted branch and merge preparation.
 - Reuse the merged PR #6 evidence instead of creating a second source/provenance truth.
 
 ## Assumptions and Open Decisions
 
 | Item | Status | Impact | Owner / Next step |
 | --- | --- | --- | --- |
-| Offline Import / Native Runtime | confirmed | Determines all document and dependency edits | ADR reviewer |
-| v1.0 remains historical input outside Git | confirmed | v1.1 becomes the repository canonical document only after review and merge | documentation reviewer |
+| Offline Import / Native Runtime | accepted | Determines all document and dependency edits | repository owner |
+| v1.0 remains historical input outside Git | confirmed | v1.1 is canonical on `main` after the accepted branch merges | repository owner |
 | Exact `CompiledRunInput` shape | unresolved by design | Must not be guessed in this docs-only change | M1-A |
 | Raw upstream asset rights | unresolved per asset | Blocks `asset_import`, not architecture documentation | source reviewer |
 | PyRIT private API replacement | deferred | Does not block M1 | compatibility issue owner |
@@ -136,43 +137,42 @@ lifecycle state; delivery status is tracked in PR #11 and issue #10.
 - **Entry condition**: clean latest-main worktree and green baseline.
 - **Phase rules**:
   - Documentation and issue state only.
-  - ADR remains `Proposed` until review.
+  - ADR status records the plan-time `Proposed` state; the current accepted state is recorded below.
   - Every strong claim cites current code, source locks, or an audited fixed commit.
 - **Todos**:
-  - [ ] Write internal, docs-vs-code, architecture, field, razor, and rewrite-disposition evidence.
+  - [x] Write internal, docs-vs-code, architecture, field, razor, and rewrite-disposition evidence.
     - **Surface**: `docs/superpowers/audits/`.
     - **Proof**: every P1 claim has a document and code/config reference.
     - **Depends on**: clean baseline.
-  - [ ] Create the blocking architecture-alignment issue.
+  - [x] Create the blocking architecture-alignment issue.
     - **Surface**: GitHub Issues.
     - **Proof**: issue stays open until the replacement PR merges.
     - **Depends on**: audit scope.
 - **Exit proof**: route, cuts, deferred debt, and acceptance criteria have one written owner.
 - **Stop condition**: stop if current code or PR #6 contradicts Offline Import / Native Runtime.
 
-### Phase 2: Migrate and align the proposed architecture documents
+### Phase 2: Migrate and align the architecture documents
 
-- **Purpose**: prepare a reviewable proposed replacement without reviving PR #5's stale manifest.
+- **Purpose**: prepare a reviewable replacement without reviving PR #5's stale manifest.
 - **Entry condition**: Phase 1 evidence complete.
 - **Phase rules**:
   - Preserve verified wording where it still matches the anchor.
   - Remove failed v1.0 blocks; replacement coverage must come from the accepted anchor.
   - Current PR #6 source locks and inventory win over PR #5 source details.
 - **Todos**:
-  - [ ] Add ADR-0002 as `Proposed` and link it from the architecture index.
+  - [x] Add ADR-0002 and link it from the architecture index.
     - **Surface**: `docs/adr/`, `docs/architecture/README.md`.
     - **Proof**: link validation and status scan.
     - **Depends on**: Phase 1.
-  - [ ] Migrate the source audit as a deduplicated evidence map.
+  - [x] Migrate the source audit as a deduplicated evidence map.
     - **Surface**: `docs/architecture/reference-reuse-audit.md`.
     - **Proof**: every fixed source tuple matches current locks or is clearly marked audit-only.
     - **Depends on**: merged PR #6 documents.
-  - [ ] Rewrite the importer spike plan around two initial offline importers.
+  - [x] Rewrite the importer spike plan around two initial offline importers.
     - **Surface**: `docs/development/importer-spike-plan.md`.
     - **Proof**: no production runtime adapter and no upstream package dependency.
     - **Depends on**: ADR-0002.
-  - [ ] Publish scenario/data-assets v1.1 as the proposed candidate intended to become canonical
-    after review and merge.
+  - [x] Publish scenario/data-assets v1.1 and record its accepted canonical-on-merge state.
     - **Surface**: `docs/architecture/scenario-data-assets-v1.1.md`.
     - **Proof**: obsolete-term scans are empty and every anchor item is represented.
     - **Depends on**: ADR and current execution contracts.
@@ -180,31 +180,34 @@ lifecycle state; delivery status is tracked in PR #11 and issue #10.
 - **Stop condition**: stop if a migrated claim would require changing production code or inventing
   the M1-A type shape.
 
-### Phase 3: Delivery and review handoff
+### Phase 3: Delivery and owner-acceptance closeout
 
-- **Purpose**: replace Draft PR #5 safely and retain non-blocking debt visibility.
+- **Purpose**: replace Draft PR #5 safely, record owner acceptance, and retain non-blocking debt visibility.
 - **Entry condition**: Phase 2 documents and all local gates pass.
 - **Phase rules**:
   - No force push and no direct main push.
-  - Replacement PR remains reviewable; neither ADR nor v1.1 is marked `Accepted` before approval.
+  - Structured review and owner acceptance are recorded before either lifecycle status changes.
   - Close PR #5 only after the replacement PR exists and links back to it.
 - **Todos**:
-  - [ ] Create the non-blocking PyRIT compatibility issue.
+  - [x] Create the non-blocking PyRIT compatibility issue.
     - **Surface**: GitHub Issues.
     - **Proof**: issue records exact pin and upgrade checklist.
     - **Depends on**: none.
-  - [ ] Push the branch and open the replacement PR.
+  - [x] Push the branch and open the replacement PR.
     - **Surface**: GitHub Pull Request.
     - **Proof**: PR targets latest `main`, CI runs, and blocking issue is linked.
     - **Depends on**: all local gates.
-  - [ ] Comment on and close Draft PR #5 as superseded.
+  - [x] Comment on and close Draft PR #5 as superseded.
     - **Surface**: PR #5.
     - **Proof**: comment links the replacement and states why its manifest was not migrated.
     - **Depends on**: replacement PR URL.
+  - [x] Record the structured Codex review and explicit owner acceptance.
+    - **Surface**: PR #11 conversation.
+    - **Proof**: exact-Head decision matrix and owner governance comment.
+    - **Depends on**: all review findings closed.
 - **Exit proof**: one current PR contains the full docs fix and PR #5 no longer competes for merge.
-- **Stop condition**: do not merge until reviewers accept ADR-0002 and v1.1, then change both
-  statuses to `Accepted`, update the architecture index to canonical/active wording, and rerun all
-  gates on the reviewed branch.
+- **Stop condition**: do not merge until owner acceptance, `Accepted` statuses, canonical/active index
+  wording, and all gates on the new Head are recorded.
 
 ## Dry-Run Findings
 

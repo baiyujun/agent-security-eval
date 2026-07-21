@@ -1,6 +1,6 @@
 # ADR-0002: Import External Benchmarks Offline into a Project-Native Runtime
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-07-17
 
 ## Context

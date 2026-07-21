@@ -2,7 +2,7 @@
 
 - Audit baseline: 2026-07-16
 - Alignment date: 2026-07-17
-- Status: architecture evidence for proposed
+- Status: architecture evidence for accepted ADR-0002 and v1.1
   [ADR-0002](../adr/0002-offline-import-native-runtime.md)
 - Scope: fixed-commit source findings, reuse boundary, rights gates, and provenance ownership
 - Non-action: no third-party source, data, image, task record, fixture, or generated asset is copied

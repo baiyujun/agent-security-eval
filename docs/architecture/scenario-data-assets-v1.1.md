@@ -1,6 +1,6 @@
 # Scenario and Data Assets Plan v1.1
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-07-17
 - Decision: [ADR-0002: Offline Import / Native Runtime](../adr/0002-offline-import-native-runtime.md)
 - Source evidence: [Reference Reuse Audit](reference-reuse-audit.md)
@@ -499,8 +499,8 @@ rights, and maintenance cost are understood.
 | Security Review | threat models, trust boundaries, leakage, and evidence strength |
 | Benchmark QA | repeated runs, reset, near-miss behavior, and cross-Target calibration |
 
-Scenario and Oracle changes require independent review so one author does not both define an attack
-and weaken the evidence needed for it to pass.
+Scenario and Oracle changes require structured review and owner acceptance so one change cannot both
+define an attack and weaken the evidence needed for it to pass.
 
 ## Frozen Decisions
 
@@ -529,6 +529,6 @@ and weaken the evidence needed for it to pass.
 
 ## Immediate Next Step
 
-Review ADR-0002 and this v1.1 together. Once accepted, begin M1-A at the native
-`ScenarioCase -> CompiledRunInput / ExecutionRunSpec` boundary; do not start with external runtime
-integration.
+The owner has accepted ADR-0002 and this v1.1 together. After this PR merges, begin M1-A at the
+native `ScenarioCase -> CompiledRunInput / ExecutionRunSpec` boundary; do not start with external
+runtime integration.

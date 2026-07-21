@@ -8,8 +8,8 @@
 
 > Lifecycle note: this audit records the pre-remediation planning state observed on 2026-07-17.
 > References to PR #5 being open or to planned publication describe that baseline, not the current
-> lifecycle state. ADR-0002 and v1.1 remain `Proposed`; v1.1 becomes canonical only after explicit
-> architecture acceptance, both lifecycle transitions, and merge.
+> lifecycle state. The owner accepted the structured Codex review on PR #11; ADR-0002 and v1.1 are
+> `Accepted` on this branch, and v1.1 becomes canonical on `main` when PR #11 merges.
 
 ## Historical v1.0 Evidence Record
 
@@ -19,8 +19,8 @@ references in this audit are anchored to this exact evidence record:
 - File name: `Agent安全评测_场景与数据资产建设方案_v1.0.md`
 - SHA-256: `18745113f2549e897c14e3bcac1cbc4b6521b6157e496bf60348c1c5183c6ec0`
 - Source: user-provided planning artifact supplied for the M1 architecture-alignment review
-- Repository status: external historical input; superseded only after the proposed v1.1 candidate
-  is explicitly accepted and merged
+- Repository status: external historical input; superseded on `main` when the accepted v1.1
+  candidate merges
 
 Key excerpts that establish the conflicting runtime route are preserved here for independent
 review:
@@ -160,7 +160,7 @@ S1：两个外部 Adapter Spike
 ### Suggested Repair Order
 
 1. Migrate ADR-0002 as `Proposed` on latest main.
-2. Publish the proposed v1.1 candidate, intended to become canonical after review and merge, with
+2. Publish the v1.1 candidate for review and owner acceptance, then activate it on merge, with
    split reuse metadata and a native compilation boundary.
 3. Reconcile PR #5 audit/spike facts with PR #6 source locks.
 4. Narrow ClawSentry and AgentDojo language in current reference docs.
@@ -340,7 +340,7 @@ checker but not from operators or reviewers.
 | Option | Boundary clarity | Current fit | Migration cost | Risk | Decision |
 | --- | --- | --- | --- | --- | --- |
 | Patch v1.0 while retaining external runtime adapters | Low | Fast locally | Medium ongoing | Multiple lifecycle/truth owners | Reject |
-| ADR + proposed v1.1 candidate + offline import and isolated replay | High | Matches code and PR #6 | Low before implementation | Importer work is explicit | Recommend after review |
+| ADR + accepted v1.1 + offline import and isolated replay | High | Matches code and PR #6 | Low before implementation | Importer work is explicit | Accepted after structured review |
 | Reference-only, no imports | Very high | Too narrow for executable assets | Low | Cannot build native packs | Fallback when rights/semantics fail |
 
 ### Findings
@@ -395,10 +395,11 @@ checker but not from operators or reviewers.
 - Searches for `executable_adapter`, runtime adapter class names, `Benchmark Adapter`, ClawSentry,
   `import_mode`, `reuse_mode`, `asset_role`, and `upstream_replay` across all relevant refs.
 
-### Next Step
+### Lifecycle Closeout
 
-Publish ADR-0002 and the v1.1 candidate as `Proposed`, then require explicit review before changing
-both statuses to `Accepted`, activating canonical wording, or starting M1-A.
+The historical next step was to publish ADR-0002 and the v1.1 candidate as `Proposed` and obtain
+review. That review and owner acceptance are now recorded on PR #11; the lifecycle commit changes
+both statuses to `Accepted` and activates canonical wording. M1-A starts only after PR #11 merges.
 
 ## SourceAssetReuseMetadata Data Model Audit
 
