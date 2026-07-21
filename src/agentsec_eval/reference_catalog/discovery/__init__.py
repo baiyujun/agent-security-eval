@@ -5,5 +5,6 @@ from agentsec_eval.reference_catalog.discovery.base import (
     SourceCheckout,
     SourceDiscoverer,
 )
+from agentsec_eval.reference_catalog.discovery.saber import SaberDiscoverer
 
-__all__ = ["DiscoveryContext", "SourceCheckout", "SourceDiscoverer"]
+__all__ = ["DiscoveryContext", "SaberDiscoverer", "SourceCheckout", "SourceDiscoverer"]
